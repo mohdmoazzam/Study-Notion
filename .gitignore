@@ -29,7 +29,6 @@ pnpm-lock.yaml
 .editorconfig
 .nvmrc
 package-lock.json
-package.json
 
 
 
