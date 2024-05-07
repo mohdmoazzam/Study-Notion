@@ -1,31 +1,27 @@
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { apiConnector } from "../../../services/apiconnector";
 import CountryCode from "../../../data/countrycode.json";
+import toast from "react-hot-toast";
+import { apiConnector } from "../../../services/apiconnector";
+import { contactusEndpoint } from "../../../services/apis";
 
 const ContactUsForm = () => {
+
+  const { register, handleSubmit, reset, formState: { errors, isSubmitSuccessful } } = useForm();
+
   const submitContactForm = async (data) => {
-    console.log(data);
+    const toastId = toast.loading("Loading...")
     try {
       setLoading(true);
-      // const response = await apiConnector(
-      //   "POST",
-      //   contactusEndpoint.CONTACT_US_API
-      // );
-      const response = { status: "OK" };
-      setLoading(false);
+      await apiConnector("POST", contactusEndpoint.CONTACT_US_API, data);
     } catch (error) {
       console.error(error.message);
-      setLoading(false);
+      toast.dismiss(toastId)
     }
+    toast.dismiss(toastId);
+    toast.success("Message sent successfully");
   };
   const [loading, setLoading] = useState(false);
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitSuccessful },
-  } = useForm();
 
   useEffect(() => {
     if (isSubmitSuccessful) {
@@ -160,10 +156,9 @@ const ContactUsForm = () => {
           disabled={loading}
           type="submit"
           className={`rounded-md bg-yellow-50 px-6 py-3 text-center text-[13px] font-bold text-black shadow-[2px_2px_0px_0px_rgba(255,255,255,0.18)] 
-         ${
-           !loading &&
-           "transition-all duration-200 hover:scale-95 hover:shadow-none"
-         }  disabled:bg-richblack-500 sm:text-[16px] `}
+         ${!loading &&
+            "transition-all duration-200 hover:scale-95 hover:shadow-none"
+            }  disabled:bg-richblack-500 sm:text-[16px] `}
         >
           Send Message
         </button>
