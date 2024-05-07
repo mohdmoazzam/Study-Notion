@@ -8,7 +8,7 @@ body {
 }
 
 .homepage_bg {
-  background: url("D:\Code\StudyNotion\src\assets\Images\bghome.svg");
+  background: url("./assets/Images/bghome.svg");
 }
 
 .spinner {
