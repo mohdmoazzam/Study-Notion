@@ -7,7 +7,6 @@ export const asyncHandler =
     fn(req, res, next).catch(next);
   };
 
-// The client checks `success` on some endpoints and `isSuccess` on others, so send both.
 export const sendSuccess = (res: Response, statusCode: number, body: Record<string, unknown> = {}): void => {
-  res.status(statusCode).json({ success: true, isSuccess: true, ...body });
+  res.status(statusCode).json({ success: true, ...body });
 };

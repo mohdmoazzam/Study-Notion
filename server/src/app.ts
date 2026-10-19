@@ -30,7 +30,7 @@ export const createApp = (): Express => {
   app.use(cleanupUploads);
 
   app.get("/", (_req, res) => {
-    res.json({ success: true, isSuccess: true, message: "Your server is up and running" });
+    res.json({ success: true, message: "Your server is up and running" });
   });
   app.use("/api/v1", apiRouter);
 

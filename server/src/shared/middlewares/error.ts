@@ -24,5 +24,5 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (status >= 500) {
     console.error(err);
   }
-  res.status(status).json({ success: false, isSuccess: false, message });
+  res.status(status).json({ success: false, message });
 };
