@@ -1,114 +1,111 @@
-import React, { useEffect, useState } from 'react';
-import { IoIosArrowBack } from "react-icons/io";
-import { useSelector } from 'react-redux';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import IconBtn from '../../common/IconBtn';
-import { BsChevronDown } from "react-icons/bs"
+import { useEffect, useRef, useState } from "react"
+import { FiCheckCircle, FiChevronDown, FiCircle, FiPlayCircle } from "react-icons/fi"
+import { Link, useParams } from "react-router-dom"
 
-export const VideoDetailsSidebar = ({ setReviewModal }) => {
+import { formatClock, formatLength, sectionSeconds } from "./courseOutline"
 
-    const [activeStatus, setActiveStatus] = useState("");
-    const [videoBarActive, setVideoBarActive] = useState("");
-    const navigate = useNavigate();
-    const location = useLocation();
-    const { sectionId, subSectionId } = useParams();
+// Course content panel: collapsible sections with each lecture's status and length.
+export const VideoDetailsSidebar = ({ course, completed }) => {
+  const { sectionId, subSectionId } = useParams()
+  const sections = course.courseContent ?? []
+  const [open, setOpen] = useState(() => new Set(sectionId ? [sectionId] : sections[0] ? [sections[0]._id] : []))
+  const currentRef = useRef(null)
 
-    const { courseSectionData, courseEntireData, totalNoOfLectures, completedLectures } = useSelector((state) => state.viewCourse);
+  // Keep the section of the lecture being played expanded and its row in view.
+  useEffect(() => {
+    if (sectionId) setOpen((current) => (current.has(sectionId) ? current : new Set(current).add(sectionId)))
+  }, [sectionId])
+  // Only on desktop, where the panel scrolls on its own; on phones it sits below the video.
+  useEffect(() => {
+    if (window.matchMedia("(min-width: 1024px)").matches) currentRef.current?.scrollIntoView({ block: "nearest" })
+  }, [subSectionId])
 
-    useEffect(() => {
-        ; (() => {
-            if (!courseSectionData.length) {
-                return;
-            }
-            const currentSectionIndex = courseSectionData.findIndex((data) => data?._id === sectionId);
-            const currentSubSectionIndex = courseSectionData?.[currentSectionIndex]?.subSection.findIndex(
-                (data) => data._id === subSectionId
-            );
+  const toggle = (id) =>
+    setOpen((current) => {
+      const next = new Set(current)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
 
-            const activeSubSectionId = courseSectionData[currentSectionIndex]?.subSection?.[currentSubSectionIndex]?._id;
-            //set current section here
-            setActiveStatus(courseSectionData?.[currentSectionIndex]?._id);
-            //set current sub-section here
-            setVideoBarActive(activeSubSectionId);
-        })()
-    }, [courseSectionData, courseEntireData, location.pathname]);
+  const lectureCount = sections.reduce((sum, section) => sum + (section.subSection?.length ?? 0), 0)
+  const totalSeconds = sections.reduce((sum, section) => sum + sectionSeconds(section), 0)
 
-    return (
-        <>
-            <div className="flex h-[calc(100vh-3.5rem)] w-[320px] max-w-[350px] flex-col border-r-[1px] border-r-richblack-700 bg-richblack-800">
-                {/* For buttons and heading */}
-                <div className='mx-5 flex flex-col items-start justify-between gap-2 gap-y-4 border-b border-richblack-600 py-5 text-lg font-bold text-richblack-25'>
-                    {/* for buttons */}
-                    <div className='flex w-full items-center justify-between'>
-                        <div onClick={() => navigate("/dashboard/enrolled-courses")} className="flex h-[35px] w-[35px] items-center justify-center rounded-full bg-richblack-100 p-1 text-richblack-700 hover:scale-90">
-                            <IoIosArrowBack size={30} />
-                        </div>
-                        <IconBtn text="Add Review" customClasses="ml-auto" onclick={() => setReviewModal(true)} />
-                    </div>
+  return (
+    <div>
+      <div className="border-b border-line px-4 py-4 sm:px-5">
+        <h2 className="font-semibold text-content">Course content</h2>
+        <p className="mt-0.5 text-xs text-content-muted">
+          {sections.length} {sections.length === 1 ? "section" : "sections"} · {lectureCount}{" "}
+          {lectureCount === 1 ? "lecture" : "lectures"} · {formatLength(totalSeconds)}
+        </p>
+      </div>
 
-                    {/* for heading or title*/}
-                    <div className='flex flex-col'>
-                        <p>{courseEntireData?.courseName}</p>
-                        <p className="text-sm font-semibold text-richblack-500">{completedLectures.length} / {totalNoOfLectures}</p>
-                    </div>
+      <ul>
+        {sections.map((section, index) => {
+          const lectures = section.subSection ?? []
+          const done = lectures.filter((lecture) => completed.has(String(lecture._id))).length
+          const expanded = open.has(section._id)
+          const panelId = `section-panel-${section._id}`
+
+          return (
+            <li key={section._id} className="border-b border-line">
+              <button
+                type="button"
+                onClick={() => toggle(section._id)}
+                aria-expanded={expanded}
+                aria-controls={panelId}
+                className="flex w-full items-start gap-3 px-4 py-3.5 text-left transition hover:bg-page sm:px-5"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-content-subtle">Section {index + 1}</p>
+                  <p className="font-semibold text-content">{section.sectionName}</p>
+                  <p className="mt-0.5 text-xs text-content-muted">
+                    {done}/{lectures.length} done · {formatLength(sectionSeconds(section))}
+                  </p>
                 </div>
+                <FiChevronDown
+                  aria-hidden="true"
+                  className={`mt-1 shrink-0 text-content-muted transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+                />
+              </button>
 
-                {/* for section and subSections */}
-
-                <div className="h-[calc(100vh - 5rem)] overflow-y-auto">
-                    {
-                        courseSectionData?.map((section, index) => (
-                            <div
-                                onClick={() => setActiveStatus(section?._id)}
-                                key={index}
-                                className="mt-2 cursor-pointer text-sm text-richblack-5"
-                            >
-                                {/* section */}
-                                <div className="flex flex-row justify-between bg-richblack-600 px-5 py-4">
-                                    <div className="w-[70%] font-semibold">
-                                        {section?.sectionName}
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className={`${activeStatus === section?.sectionName ? "rotate-0" : "rotate-180"} transition-all duration-500`} >
-                                            <BsChevronDown />
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* sub-sections */}
-
-                                <div>
-                                    {
-                                        activeStatus === section?._id && (
-                                            <div className="transition-[height] duration-500 ease-in-out">
-                                                {
-                                                    section.subSection?.map((topic, i) => (
-                                                        <div
-                                                            className={`flex gap-5 p-5 ${videoBarActive === topic?._id ? "bg-yellow-200 text-on-brand" : "bg-richblack-900 text-richblack-5"}`}
-                                                            key={i}
-                                                            onClick={() => {
-                                                                navigate(`/view-course/${courseEntireData?._id}/section/${section._id}/sub-section/${topic?._id}`)
-                                                                setVideoBarActive(topic?._id)
-                                                            }}
-                                                        >
-                                                            <input
-                                                                type='checkbox'
-                                                                checked={completedLectures.includes(topic?._id)}
-                                                                onChange={() => { }}
-                                                            />
-                                                            <span>{topic?.title}</span>
-                                                        </div>
-                                                    ))
-                                                }
-                                            </div>
-                                        )
-                                    }
-                                </div>
-                            </div>
-                        ))
-                    }
-                </div>
-            </div>
-        </>
-    )
+              {expanded && (
+                <ul id={panelId} className="pb-2">
+                  {lectures.length === 0 && <li className="px-5 py-2 text-sm text-content-subtle">No lectures yet</li>}
+                  {lectures.map((lecture, lectureIndex) => {
+                    const current = lecture._id === subSectionId
+                    const isDone = completed.has(String(lecture._id))
+                    const Icon = isDone ? FiCheckCircle : current ? FiPlayCircle : FiCircle
+                    return (
+                      <li key={lecture._id}>
+                        <Link
+                          ref={current ? currentRef : undefined}
+                          to={`/view-course/${course._id}/section/${section._id}/sub-section/${lecture._id}`}
+                          aria-current={current ? "page" : undefined}
+                          className={`mx-2 flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+                            current ? "bg-selected" : "hover:bg-page"
+                          }`}
+                        >
+                          <Icon
+                            aria-label={isDone ? "Completed" : undefined}
+                            className={`mt-0.5 shrink-0 ${isDone || current ? "text-accent" : "text-content-subtle"}`}
+                          />
+                          <span className={`min-w-0 flex-1 ${current ? "font-semibold text-content" : "text-content-muted"}`}>
+                            {lectureIndex + 1}. {lecture.title}
+                          </span>
+                          {Number(lecture.timeDuration) > 0 && (
+                            <span className="shrink-0 text-xs tabular-nums text-content-subtle">{formatClock(lecture.timeDuration)}</span>
+                          )}
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
 }

@@ -1,29 +1,52 @@
-import React from "react";
-import { useDispatch, useSelector } from "react-redux";
-import IconBtn from "../../../common/IconBtn";
-import { buyCourse } from "../../../../services/operations/studentFeaturesAPI";
-import { useNavigate } from "react-router-dom";
+import { FiArrowRight, FiLock } from "react-icons/fi"
+import { Link } from "react-router-dom"
 
-const RenderTotalAmount = () => {
-  const { total, cart } = useSelector((state) => state.cart);
-  const { token } = useSelector((state) => state.auth);
-  const { user } = useSelector((state) => state.profile);
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
+import { formatAmount, formatPrice } from "../../../../utils/formatPrice"
 
-  const handleBuyCourse = () => {
-    const courses = cart.map((course) => course._id);
-    console.log("Courses", courses);
-    buyCourse(token, courses, user, navigate, dispatch);
-  };
-
+// Order summary with the checkout button. `blockedReason` disables checkout and says why.
+export default function RenderTotalAmount({ courses, total, onCheckout, processing, blockedReason }) {
   return (
-    <div className="min-w-[280px] rounded-md border-[1px] border-richblack-700 bg-richblack-800 p-6">
-      <p className="mb-1 text-sm font-medium text-richblack-300">Total:</p>
-      <p className="mb-6 text-3xl font-medium text-accent">₹ {total}</p>
-      <IconBtn text="Buy Now" onclick={handleBuyCourse} customClasses="w-full justify-center" />
-    </div>
-  );
-};
+    <section aria-labelledby="order-summary" className="rounded-2xl border border-line bg-surface p-5 shadow-sm">
+      <h2 id="order-summary" className="font-semibold text-content">
+        Order summary
+      </h2>
 
-export default RenderTotalAmount;
+      <ul className="mt-4 space-y-2 text-sm">
+        {courses.map((course) => (
+          <li key={course._id} className="flex justify-between gap-3">
+            <span className="min-w-0 truncate text-content-muted">{course.courseName}</span>
+            <span className="shrink-0 text-content">{formatPrice(course.price)}</span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-4 flex items-baseline justify-between border-t border-line pt-4">
+        <span className="font-medium text-content">
+          Total{" "}
+          <span className="text-sm font-normal text-content-muted">
+            ({courses.length} {courses.length === 1 ? "course" : "courses"})
+          </span>
+        </span>
+        <span className="text-2xl font-bold tracking-tight text-content">{formatAmount(total)}</span>
+      </div>
+
+      <button
+        type="button"
+        onClick={onCheckout}
+        disabled={processing || Boolean(blockedReason)}
+        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-5 py-3 font-semibold text-on-brand transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {processing ? "Processing…" : "Checkout"} {!processing && <FiArrowRight aria-hidden="true" />}
+      </button>
+      {blockedReason && <p className="mt-2 text-center text-xs font-medium text-danger">{blockedReason}</p>}
+
+      <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-content-subtle">
+        <FiLock aria-hidden="true" /> Secure payment via Razorpay · Lifetime access
+      </p>
+
+      <Link to="/" className="mt-4 block text-center text-sm font-semibold text-accent hover:underline">
+        Continue browsing
+      </Link>
+    </section>
+  )
+}

@@ -15,6 +15,8 @@ export const createApp = (): Express => {
   const app = express();
 
   app.disable("x-powered-by");
+  // Behind the host's proxy in production, so req.ip is the client's address (used by login lockouts).
+  if (env.isProduction) app.set("trust proxy", 1);
   app.use(cors({ origin: env.corsOrigin, credentials: true }));
   app.use(express.json({ limit: "1mb" }));
   app.use(cookieParser());

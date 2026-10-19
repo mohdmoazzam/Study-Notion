@@ -4,6 +4,7 @@ import { uploadToCloudinary } from "../../lib/cloudinary";
 import { AppError } from "../../shared/errors";
 import type { AuthUser } from "../../shared/types/auth";
 import { convertSecondsToDuration, countSubSections, getTotalSeconds } from "../../shared/utils/duration";
+import { escapeRegex } from "../../shared/utils/regex";
 import { Category } from "../categories/category.model";
 import { CourseProgress } from "../progress/courseProgress.model";
 import { RatingAndReview } from "../reviews/review.model";
@@ -162,8 +163,6 @@ export interface InstructorCourseQuery {
   search?: string;
   sort: InstructorCourseSort;
 }
-
-const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // Courses without a status count as drafts.
 const statusFilter = (status: CourseStatus) => (status === "Published" ? { status } : { status: { $ne: "Published" } });

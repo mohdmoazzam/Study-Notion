@@ -111,9 +111,10 @@ export const Navbar = () => {
         </nav>
 
         {/* Login/Signup/Dashboard Button */}
-        <div className="hidden items-center gap-x-4 md:flex">
+        {/* The account menu shows at every width (it carries the cart and dashboard links on phones); the rest is md+. */}
+        <div className="flex items-center gap-x-4">
           {user && user?.accountType !== ACCOUNT_TYPE.INSTRUCTOR && (                  // if user is present(login) and user is not instructor then we show cart icon in place of login and signup;
-            <Link to="/dashboard/cart" className="relative">
+            <Link to="/dashboard/cart" className="relative hidden md:block">
               <AiOutlineShoppingCart className="text-2xl text-richblack-100" />          {/* icon of cart */}
               {totalItems > 0 && (<span className="absolute -bottom-2 -right-2 grid h-5 w-5 place-items-center overflow-hidden rounded-full bg-richblack-600 text-center text-xs font-bold text-accent">
                 {totalItems}                                      {/* no of item(courses) present in cart , we take it absolute because we want to overlap it over cart icon */}
@@ -124,7 +125,7 @@ export const Navbar = () => {
           )
           }
           {token === null && (
-            <Link to="/login">
+            <Link to="/login" className="hidden md:block">
               <button
                 className="border border-richblack-700 bg-richblack-800 px-[12px] py-[8px]
                                 text-richblack-100 rounded-md"
@@ -134,7 +135,7 @@ export const Navbar = () => {
             </Link>
           )}
           {token === null && (
-            <Link to="/signup">
+            <Link to="/signup" className="hidden md:block">
               <button
                 className="border border-richblack-700 bg-richblack-800 px-[12px] py-[8px]
                                 text-richblack-100 rounded-md"

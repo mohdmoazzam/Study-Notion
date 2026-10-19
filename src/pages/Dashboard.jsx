@@ -5,8 +5,10 @@ import Sidebar from "../components/core/Dashboard/Sidebar"
 
 const Dashboard = () => {
   const { loading: authLoading } = useSelector((state) => state.auth)
-  const { loading: profileLoading } = useSelector((state) => state.profile)
-  if (profileLoading || authLoading) {
+  const { user, loading: profileLoading } = useSelector((state) => state.profile)
+  // The profile refresh on app load runs in the background; blocking (and unmounting the page,
+  // which restarts its requests) is only needed when there is no cached user to show yet.
+  if (authLoading || (profileLoading && !user)) {
     return <div className="mt-10">Loading...</div>
   }
   // Phones: tab bar above the content. Tablet and up: sidebar beside a scrolling content area.

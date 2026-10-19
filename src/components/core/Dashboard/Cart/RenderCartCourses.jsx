@@ -1,51 +1,92 @@
-import React from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { GiNinjaStar } from "react-icons/gi";
-import ReactStars from "react-rating-stars-component";
-import { RiDeleteBin6Line } from "react-icons/ri";
-import { removeFromCart } from "../../../../slices/cartSlice";
+import { FaStar } from "react-icons/fa"
+import { FiAlertCircle, FiBookOpen, FiClock, FiTrash2 } from "react-icons/fi"
+import { Link } from "react-router-dom"
 
-const RenderCartCourses = () => {
-  const { cart } = useSelector((state) => state.cart);
-  console.log("Printing cart", cart);
-  const dispatch = useDispatch();
+import GetAvgRating from "../../../../utils/avgRating"
+import { formatPrice } from "../../../../utils/formatPrice"
+import { formatLength, sectionSeconds } from "../../ViewCourse/courseOutline"
+
+const courseStats = (course) => {
+  const sections = course.courseContent ?? []
+  const lectures = sections.reduce((sum, section) => sum + (section.subSection?.length ?? 0), 0)
+  const seconds = sections.reduce((sum, section) => sum + sectionSeconds(section), 0)
+  return { lectures, length: seconds ? formatLength(seconds) : null }
+}
+
+function CartItem({ course, owned, onRemove }) {
+  // Older saved carts may hold bare review ids; those only count once the cart refreshes.
+  const reviews = (course.ratingAndReviews ?? []).filter((review) => typeof review?.rating === "number")
+  const rating = reviews.length ? GetAvgRating(reviews) : 0
+  const { lectures, length } = courseStats(course)
+  const instructor = course.instructor && typeof course.instructor === "object" ? course.instructor : null
 
   return (
-    <div className="flex flex-1 flex-col">
-      {cart.map((course, indx) => (
-        <div key={course._id}  className={`flex w-full flex-wrap items-start justify-between gap-6 ${indx !== cart.length - 1 && "border-b border-b-richblack-400 pb-6"} ${indx !== 0 && "mt-6"} `} >
-          <div className="flex flex-1 flex-col gap-4 xl:flex-row">
-            <img src={course?.thumbnail} alt="img" className="h-[148px] w-[220px] rounded-lg object-cover"/>
-            <div className="flex flex-col space-y-1">
-              <p className="text-lg font-medium text-richblack-5">{course?.courseName}</p>
-              <p className="text-sm text-richblack-300">{course?.category?.name}</p>
-              <div className="flex items-center gap-2">
-                <span className="text-accent">4.8</span>
-                <ReactStars
-                  count={5}
-                  size={20}
-                  edit={false}
-                  activeColor="#ffd700"
-                  emptyIcon={<GiNinjaStar />}
-                  fullIcon={<GiNinjaStar />}
-                />
-                <span className="text-richblack-400">{course?.ratingAndReviews?.length} Ratings</span>
-              </div>
-            </div>
-          </div>
+    <li className="flex gap-4 p-4 sm:p-5">
+      <Link to={`/courses/${course._id}`} className="shrink-0">
+        <img src={course.thumbnail} alt="" className="aspect-video w-24 rounded-lg bg-page object-cover sm:w-40" />
+      </Link>
 
-          <div className="flex flex-col items-end space-y-2">
-            <button onClick={() => dispatch(removeFromCart(course._id))} className="flex items-center gap-x-1 rounded-md border border-richblack-600 bg-richblack-700 py-3 px-[12px] text-pink-200" >
-              <RiDeleteBin6Line />
-              <span>Remove</span>
-            </button>
-
-            <p className="mb-6 text-3xl font-medium text-accent">Rs {course?.price}</p>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <Link to={`/courses/${course._id}`} className="line-clamp-2 font-semibold text-content hover:text-accent">
+              {course.courseName}
+            </Link>
+            {instructor && (
+              <p className="mt-0.5 truncate text-sm text-content-muted">
+                By {instructor.firstName} {instructor.lastName}
+              </p>
+            )}
           </div>
+          <p className="shrink-0 text-lg font-bold text-content sm:text-right">{formatPrice(course.price)}</p>
         </div>
-      ))}
-    </div>
-  );
-};
 
-export default RenderCartCourses;
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-content-muted">
+          {reviews.length > 0 ? (
+            <span className="inline-flex items-center gap-1">
+              <FaStar aria-hidden="true" className="text-brand" />
+              <span className="font-semibold text-content">{rating.toFixed(1)}</span> ({reviews.length})
+            </span>
+          ) : (
+            <span>No ratings yet</span>
+          )}
+          {lectures > 0 && (
+            <span className="inline-flex items-center gap-1">
+              <FiBookOpen aria-hidden="true" /> {lectures} {lectures === 1 ? "lecture" : "lectures"}
+            </span>
+          )}
+          {length && (
+            <span className="inline-flex items-center gap-1">
+              <FiClock aria-hidden="true" /> {length}
+            </span>
+          )}
+          {course.category?.name && <span className="rounded-full bg-page px-2 py-0.5 ring-1 ring-line">{course.category.name}</span>}
+        </div>
+
+        {owned && (
+          <p className="mt-2 flex items-center gap-1.5 text-sm font-medium text-danger">
+            <FiAlertCircle aria-hidden="true" /> You already own this course. Remove it to check out.
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={() => onRemove(course)}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-content-muted transition hover:text-danger"
+        >
+          <FiTrash2 aria-hidden="true" /> Remove
+        </button>
+      </div>
+    </li>
+  )
+}
+
+export default function RenderCartCourses({ courses, ownedIds, onRemove }) {
+  return (
+    <ul className="divide-y divide-line rounded-2xl border border-line bg-surface shadow-sm">
+      {courses.map((course) => (
+        <CartItem key={course._id} course={course} owned={ownedIds.has(String(course._id))} onRemove={onRemove} />
+      ))}
+    </ul>
+  )
+}

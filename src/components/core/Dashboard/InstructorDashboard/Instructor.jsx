@@ -11,7 +11,7 @@ import { InstructorChart } from "./InstructorChart"
 
 const RECENT_COURSES = 5
 
-function StatCard({ Icon, label, value, hint }) {
+export function StatCard({ Icon, label, value, hint }) {
   return (
     <div className="rounded-2xl border border-line bg-surface p-4 shadow-sm sm:p-5">
       <div className="flex items-center justify-between gap-2">

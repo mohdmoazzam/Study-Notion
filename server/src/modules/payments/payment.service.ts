@@ -1,12 +1,15 @@
 import crypto from "crypto";
+import { Types } from "mongoose";
 import { env } from "../../config/env";
 import { paymentSuccessEmail } from "../../emails/paymentSuccess";
 import { sendMailSafe } from "../../lib/mailer";
 import { razorpay } from "../../lib/razorpay";
 import { AppError } from "../../shared/errors";
+import { escapeRegex } from "../../shared/utils/regex";
 import { Course } from "../courses/course.model";
 import { User } from "../users/user.model";
 import { enrollStudent } from "./enrollment.service";
+import { Payment } from "./payment.model";
 
 // Razorpay notes allow at most 15 keys of 256 chars each, so course ids are chunked across keys.
 const IDS_PER_NOTE = 10;
@@ -28,7 +31,7 @@ const encodeCourseIds = (ids: string[]): Record<string, string> => {
   return notes;
 };
 
-const decodeCourseIds = (notes: Record<string, string | number>): string[] =>
+export const decodeCourseIds = (notes: Record<string, string | number>): string[] =>
   Object.entries(notes)
     .filter(([key]) => key.startsWith(COURSE_NOTE_PREFIX))
     .flatMap(([, value]) => String(value).split(","))
@@ -78,7 +81,81 @@ export const verifyAndEnroll = async (userId: string, confirmation: PaymentConfi
     throw AppError.badRequest("Payment failed");
   }
 
-  await enrollStudent(userId, decodeCourseIds(notes));
+  const courseIds = decodeCourseIds(notes);
+  await enrollStudent(userId, courseIds);
+  await recordPayment(userId, courseIds, {
+    orderId: confirmation.orderId,
+    paymentId: confirmation.paymentId,
+    amountInPaise: Number(order.amount),
+    currency: order.currency,
+  });
+};
+
+// Saves the purchase for the student's history. Upserting on the order id keeps a repeated
+// verification of the same payment from creating a second record.
+// `paidAt` is for backfilling older purchases with their original date; it defaults to now.
+export const recordPayment = async (
+  userId: string,
+  courseIds: string[],
+  {
+    orderId,
+    paymentId,
+    amountInPaise,
+    currency,
+    paidAt,
+  }: { orderId: string; paymentId: string; amountInPaise: number; currency: string; paidAt?: Date }
+): Promise<boolean> => {
+  const courses = await Course.find({ _id: { $in: courseIds } }, "courseName price thumbnail").lean();
+  const result = await Payment.updateOne(
+    { razorpayOrderId: orderId },
+    {
+      $setOnInsert: {
+        user: userId,
+        courses: courses.map((course) => ({
+          course: course._id,
+          courseName: course.courseName ?? "Untitled course",
+          price: course.price ?? 0,
+          thumbnail: course.thumbnail,
+        })),
+        amount: amountInPaise / 100,
+        currency,
+        razorpayOrderId: orderId,
+        razorpayPaymentId: paymentId,
+        ...(paidAt && { createdAt: paidAt, updatedAt: paidAt }),
+      },
+    },
+    // With an explicit date, Mongoose must not stamp its own timestamps over it.
+    { upsert: true, ...(paidAt && { timestamps: false }) }
+  );
+  return result.upsertedCount > 0;
+};
+
+export const HISTORY_PAGE_SIZE = 10;
+
+// The student's purchases, newest first. `search` matches course names; `summary` covers all purchases.
+export const getPurchaseHistory = async (userId: string, { search, page }: { search: string; page: number }) => {
+  const user = new Types.ObjectId(userId);
+  const filter = search ? { user, "courses.courseName": { $regex: escapeRegex(search), $options: "i" } } : { user };
+
+  const [payments, total, [summary]] = await Promise.all([
+    Payment.find(filter, "-user -__v")
+      .sort({ _id: -1 })
+      .skip((page - 1) * HISTORY_PAGE_SIZE)
+      .limit(HISTORY_PAGE_SIZE)
+      .lean(),
+    Payment.countDocuments(filter),
+    Payment.aggregate<{ orders: number; totalSpent: number; courses: number }>([
+      { $match: { user } },
+      { $group: { _id: null, orders: { $sum: 1 }, totalSpent: { $sum: "$amount" }, courses: { $sum: { $size: "$courses" } } } },
+    ]),
+  ]);
+
+  return {
+    payments,
+    summary: { orders: summary?.orders ?? 0, totalSpent: summary?.totalSpent ?? 0, courses: summary?.courses ?? 0 },
+    page,
+    totalPages: Math.max(1, Math.ceil(total / HISTORY_PAGE_SIZE)),
+  };
 };
 
 export const sendPaymentSuccessEmail = async (

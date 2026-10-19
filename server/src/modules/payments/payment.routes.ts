@@ -9,3 +9,4 @@ paymentRoutes.use(authenticate, isStudent);
 paymentRoutes.post("/capturePayment", paymentController.capturePayment);
 paymentRoutes.post("/verifyPayment", paymentController.verifyPayment);
 paymentRoutes.post("/sendPaymentSuccessEmail", paymentController.sendPaymentSuccessEmail);
+paymentRoutes.get("/history", paymentController.getPurchaseHistory);

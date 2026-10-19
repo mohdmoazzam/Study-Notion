@@ -21,6 +21,7 @@ export const studentEndpoints = {
   COURSE_PAYMENT_API: BASE_URL + "/payment/capturePayment",
   COURSE_VERIFY_API: BASE_URL + "/payment/verifyPayment",
   SEND_PAYMENT_SUCCESS_EMAIL_API: BASE_URL + "/payment/sendPaymentSuccessEmail",
+  PURCHASE_HISTORY_API: BASE_URL + "/payment/history",
 }
 
 // COURSE ENDPOINTS
@@ -69,4 +70,17 @@ export const settingsEndpoints = {
   UPDATE_PROFILE_API: BASE_URL + "/profile/updateProfile",
   CHANGE_PASSWORD_API: BASE_URL + "/auth/changepassword",
   DELETE_PROFILE_API: BASE_URL + "/profile/deleteProfile",
+}
+
+// INSTRUCTOR PAYOUT ENDPOINTS
+export const payoutEndpoints = {
+  PAYOUT_REQUESTS_API: BASE_URL + "/payout/requests",
+  IFSC_LOOKUP_API: BASE_URL + "/payout/ifsc",
+}
+
+// SUPER ADMIN CONSOLE ENDPOINTS
+export const superAdminEndpoints = {
+  SUPER_ADMIN_LOGIN_API: BASE_URL + "/super-admin/login",
+  SUPER_ADMIN_SESSION_API: BASE_URL + "/super-admin/session",
+  SUPER_ADMIN_PAYOUTS_API: BASE_URL + "/super-admin/payouts",
 }

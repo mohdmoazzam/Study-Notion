@@ -50,4 +50,9 @@ export const env = Object.freeze({
     keyId: required("RAZORPAY_KEY"),
     keySecret: required("RAZORPAY_SECRET"),
   },
+  // Fixed credentials for the super admin console. Its login is disabled while either is unset.
+  superAdmin: {
+    email: (process.env.SUPER_ADMIN_EMAIL ?? "").trim().toLowerCase(),
+    password: process.env.SUPER_ADMIN_PASSWORD ?? "",
+  },
 });

@@ -37,9 +37,9 @@ export function getUserDetails(token, navigate) {
   };
 }
 
+// The student's courses with progress; null when the request fails (vs [] for no courses).
 export async function getUserEnrolledCourses(token) {
-  const toastId = toast.loading("Loading...");
-  let result = [];
+  let result = null;
   try {
     const response = await apiConnector("GET", GET_USER_ENROLLED_COURSES_API,
       null,
@@ -50,12 +50,11 @@ export async function getUserEnrolledCourses(token) {
     if (!response.data.success) {
       throw new Error(response.data.message);
     }
-    result = response.data.data;
+    result = response.data.data ?? [];
   } catch (error) {
     console.log("GET_USER_ENROLLED_COURSES_API API ERROR............", error);
-    toast.error("Could Not Get Enrolled Courses");
+    toast.error("Could not load your courses");
   }
-  toast.dismiss(toastId);
   return result;
 }
 

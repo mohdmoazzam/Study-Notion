@@ -1,6 +1,6 @@
 import "./App.css";
 import { useEffect } from "react";
-import { Route, Routes, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import Home from "./pages/Home";
 import { Navbar } from "./components/common/Navbar";
 import OpenRoute from "./components/core/Auth/OpenRoute";
@@ -18,6 +18,7 @@ import Error from "./pages/Error";
 import Contact from "./pages/Contact";
 import EnrolledCourses from "./components/core/Dashboard/EnrolledCourses";
 import Cart from "./components/core/Dashboard/Cart/index";
+import PurchaseHistory from "./components/core/Dashboard/PurchaseHistory";
 import { ACCOUNT_TYPE } from "./utils/constants";
 import { getUserDetails } from "./services/operations/profileAPI";
 import Settings from "./components/core/Dashboard/Settings/Index";
@@ -29,12 +30,18 @@ import { CourseDetails } from "./pages/CourseDetails";
 import { ViewCourse } from "./pages/ViewCourse";
 import { VideoDetails } from "./components/core/ViewCourse/VideoDetails";
 import { Instructor } from "./components/core/Dashboard/InstructorDashboard/Instructor";
+import Payouts from "./components/core/Dashboard/Payouts";
+import SuperAdminLogin from "./pages/SuperAdmin/Login";
+import SuperAdminLayout from "./pages/SuperAdmin/Layout";
+import SuperAdminPayouts from "./pages/SuperAdmin/Payouts";
 
 function App() {
   const { user } = useSelector((state) => state.profile);
   const { token } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  // The super admin console is a standalone site with its own header.
+  const isSuperAdminSite = useLocation().pathname.startsWith("/super-admin");
 
   // The cached user (localStorage) renders instantly; refresh it from the server once per session.
   useEffect(() => {
@@ -44,8 +51,14 @@ function App() {
 
   return (
     <div className="w-screen min-h-screen bg-richblack-900 flex flex-col font-inter">
-      <Navbar />
+      {!isSuperAdminSite && <Navbar />}
       <Routes>
+        <Route path="/super-admin/login" element={<SuperAdminLogin />} />
+        {/* Super admin console: each sidebar section (data/superAdminLinks.js) is a child route. */}
+        <Route path="/super-admin" element={<SuperAdminLayout />}>
+          <Route index element={<Navigate to="payouts" replace />} />
+          <Route path="payouts" element={<SuperAdminPayouts />} />
+        </Route>
         <Route path="/" element={<Home />} />
         <Route path="/catalog/:catalogName" element={<Catalog />} />
         <Route path="/courses/:courseId" element={<CourseDetails />} />
@@ -120,6 +133,7 @@ function App() {
                 element={<EnrolledCourses />}
               />
               <Route path="dashboard/cart" element={<Cart />} />
+              <Route path="dashboard/purchase-history" element={<PurchaseHistory />} />
             </>
           )}
           ;
@@ -132,6 +146,7 @@ function App() {
                 element={<EditCourse />}
               />
               <Route path="dashboard/instructor" element={<Instructor />} />
+              <Route path="dashboard/payouts" element={<Payouts />} />
             </>
           )}
           ;
@@ -147,6 +162,8 @@ function App() {
         >
           {user?.accountType === ACCOUNT_TYPE.STUDENT && (
             <>
+              {/* Opens the first unfinished lecture. */}
+              <Route path="view-course/:courseId" element={<VideoDetails />} />
               <Route
                 path="view-course/:courseId/section/:sectionId/sub-section/:subSectionId"
                 element={<VideoDetails />}

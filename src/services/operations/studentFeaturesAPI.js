@@ -2,10 +2,10 @@ import toast from "react-hot-toast";
 import { studentEndpoints } from "../apis";
 import { apiConnector } from "../apiconnector";
 import rzpLogo from "../../assets/Logo/rzp_logo.png"
-import { resetCart } from "../../slices/cartSlice";
+import { removeCoursesFromCart } from "../../slices/cartSlice";
 import { setPaymentLoading } from "../../slices/courseSlice";
 
-const { COURSE_PAYMENT_API, COURSE_VERIFY_API, SEND_PAYMENT_SUCCESS_EMAIL_API } = studentEndpoints;
+const { COURSE_PAYMENT_API, COURSE_VERIFY_API, SEND_PAYMENT_SUCCESS_EMAIL_API, PURCHASE_HISTORY_API } = studentEndpoints;
 
 function loadScript(src) {
     return new Promise((resolve) => {
@@ -48,9 +48,10 @@ async function verifyPayment(bodyData, token, navigate, dispatch) {
         if (!response.data.success) {
             throw new Error(response.data.message);
         }
-        toast.success("Payment Successfull");
+        toast.success("Payment successful");
         navigate("/dashboard/enrolled-courses");
-        dispatch(resetCart());
+        // "Buy now" on one course shouldn't empty the rest of the cart.
+        dispatch(removeCoursesFromCart(bodyData.courses ?? []));
     } catch (error) {
         console.log("Payment verify failed", error);
         toast.error("Could not verify payment");
@@ -62,10 +63,9 @@ async function verifyPayment(bodyData, token, navigate, dispatch) {
 export async function buyCourse(token, courses, userDetails, navigate, dispatch) {
     const toastId = toast.loading("Loading...");
     try {
-        const res = loadScript("https://checkout.razorpay.com/v1/checkout.js");
+        const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
         if (!res) {
-            toast.error("Razorpay sdk failed to load");
-            return;
+            throw new Error("Could not load the payment gateway. Check your connection and try again");
         }
 
         const orderResponse = await apiConnector("POST", COURSE_PAYMENT_API,
@@ -75,8 +75,14 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch)
             throw new Error(orderResponse.data.message);
         }
 
+        // Sent by the server with the order so Checkout uses the account that created it.
+        const key = orderResponse.data.key;
+        if (!key) {
+            throw new Error("Payments are not configured. Please try again later");
+        }
+
         const options = {
-            key: process.env.RAZORPAY_KEY,
+            key,
             currency: orderResponse.data.message.currency,
             amount: `${orderResponse.data.message.amount}`,
             order_id: orderResponse.data.message.id,
@@ -102,7 +108,20 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch)
 
     } catch (error) {
         console.log("PAYMENT API ERROR.....", error);
-        toast.error("Could not make Payment");
+        toast.error(error.response?.data?.message ?? error.message ?? "Could not make Payment");
     }
     toast.dismiss(toastId);
 };
+
+// { payments, summary, page, totalPages } for the purchase history page, or null on failure.
+export async function fetchPurchaseHistory(token, params = {}) {
+    try {
+        const response = await apiConnector("GET", PURCHASE_HISTORY_API, null, { Authorization: `Bearer ${token}` }, params);
+        const { data, summary, page, totalPages } = response.data;
+        return { payments: data ?? [], summary, page, totalPages };
+    } catch (error) {
+        console.log("PURCHASE HISTORY API ERROR.....", error);
+        toast.error("Could not load your purchases");
+        return null;
+    }
+}
