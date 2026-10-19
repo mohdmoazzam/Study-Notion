@@ -36,5 +36,8 @@
     "@types/nodemailer": "^8.0.2",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": "24.x"
   }
 }
