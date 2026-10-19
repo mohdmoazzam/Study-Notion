@@ -17,6 +17,7 @@ const clientUrls = (process.env.CLIENT_URL ?? "*")
   .map((url) => url.trim().replace(/\/$/, ""))
   .filter(Boolean);
 const allowAnyOrigin = clientUrls.length === 0 || clientUrls.includes("*");
+const brevoApiKey = process.env.BREVO_API_KEY?.trim() ?? "";
 const appUrls = clientUrls.filter((url) => url !== "*");
 
 export const env = Object.freeze({
@@ -35,10 +36,15 @@ export const env = Object.freeze({
   // Base URL for links in emails (e.g. password reset).
   clientUrl: appUrls[0] ?? "http://localhost:3000",
   contactInbox: process.env.CONTACT_INBOX ?? "mohdmozzam27@gmail.com",
+  // With BREVO_API_KEY set, mail goes through Brevo's HTTPS API (needed on hosts that block SMTP,
+  // like Render's free tier) and the SMTP settings are optional. Otherwise SMTP is used.
   mail: {
-    host: required("MAIL_HOST"),
+    brevoApiKey: brevoApiKey,
+    host: brevoApiKey ? process.env.MAIL_HOST ?? "" : required("MAIL_HOST"),
     user: required("MAIL_USER"),
-    pass: required("MAIL_PASS"),
+    pass: brevoApiKey ? process.env.MAIL_PASS ?? "" : required("MAIL_PASS"),
+    // Sender address; with Brevo it must be a verified sender in the Brevo account.
+    from: process.env.MAIL_FROM?.trim() || required("MAIL_USER"),
   },
   cloudinary: {
     cloudName: required("CLOUD_NAME"),

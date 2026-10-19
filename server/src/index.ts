@@ -2,6 +2,7 @@ import { env } from "./config/env";
 import { createApp } from "./app";
 import { connectCloudinary } from "./lib/cloudinary";
 import { connectDatabase, disconnectDatabase } from "./lib/database";
+import { mailTransport } from "./lib/mailer";
 
 const start = async (): Promise<void> => {
   connectCloudinary();
@@ -9,6 +10,7 @@ const start = async (): Promise<void> => {
 
   const server = createApp().listen(env.port, () => {
     console.info(`App is running at ${env.port}`);
+    console.info(`Email is sent via ${mailTransport}`);
   });
 
   const shutdown = (signal: string) => {
