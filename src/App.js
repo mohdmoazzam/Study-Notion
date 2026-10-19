@@ -102,34 +102,46 @@ function App() {
         >
           <Route path="dashboard/my-profile" element={<MyProfile />} />
           <Route path="dashboard/settings" element={<Settings />} />
-
           {user?.accountType === ACCOUNT_TYPE.STUDENT && (
             <>
-              <Route path="dashboard/enrolled-courses" element={<EnrolledCourses />} />
+              <Route
+                path="dashboard/enrolled-courses"
+                element={<EnrolledCourses />}
+              />
               <Route path="dashboard/cart" element={<Cart />} />
             </>
-          )};
-
+          )}
+          ;
           {user?.accountType === ACCOUNT_TYPE.INSTRUCTOR && (
             <>
               <Route path="dashboard/add-course" element={<AddCourse />} />
               <Route path="dashboard/my-courses" element={<MyCourses />} />
-              <Route path="dashboard/edit-course/:courseId" element={<EditCourse />} />
+              <Route
+                path="dashboard/edit-course/:courseId"
+                element={<EditCourse />}
+              />
               <Route path="dashboard/instructor" element={<Instructor />} />
             </>
-          )};
+          )}
+          ;
         </Route>
 
-        <Route element={<PrivateRoute> <ViewCourse /> </PrivateRoute>}>
-
-          {
-            user?.accountType === ACCOUNT_TYPE.STUDENT && (
-              <>
-                <Route path="view-course/:courseId/section/:sectionId/sub-section/:subSectionId" element={<VideoDetails />} />
-              </>
-            )
+        <Route
+          element={
+            <PrivateRoute>
+              {" "}
+              <ViewCourse />{" "}
+            </PrivateRoute>
           }
-
+        >
+          {user?.accountType === ACCOUNT_TYPE.STUDENT && (
+            <>
+              <Route
+                path="view-course/:courseId/section/:sectionId/sub-section/:subSectionId"
+                element={<VideoDetails />}
+              />
+            </>
+          )}
         </Route>
 
         <Route path="*" element={<Error />} />
