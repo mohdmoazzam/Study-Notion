@@ -88,7 +88,10 @@ function LoginForm() {
       <label className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-richblack-50">Password</span>
-          <Link to="/forgot-password" className="text-xs font-medium text-blue-100 hover:underline">
+          <Link
+            to={email ? `/forgot-password?email=${encodeURIComponent(email)}` : "/forgot-password"}
+            className="text-xs font-medium text-blue-100 hover:underline"
+          >
             Forgot password?
           </Link>
         </div>

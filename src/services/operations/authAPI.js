@@ -116,30 +116,22 @@ export function login(email, password, accountType, navigate) {
   };
 }
 
-export function getPasswordResetToken(email, setEmailSent) {
-  return async (dispatch) => {
-    const toastId = toast.loading("Loading...");
-    dispatch(setLoading(true));
-    try {
-      const response = await apiConnector("POST", RESETPASSTOKEN_API, {
-        email,
-      });
-
-      console.log("RESETPASSTOKEN RESPONSE............", response);
-
-      if (!response.data.success) {
-        throw new Error(response.data.message);
-      }
-
-      toast.success("Reset Email Sent");
-      setEmailSent(true);
-    } catch (error) {
-      console.log("RESETPASSTOKEN ERROR............", error);
-      toast.error(error.response.data.message);
+// Asks the server to email a password reset link. Resolves to { ok: true } or { error, notFound }
+// so the forgot-password page can show the outcome inline.
+export async function requestPasswordReset(email) {
+  try {
+    const response = await apiConnector("POST", RESETPASSTOKEN_API, { email });
+    if (!response.data.success) {
+      throw new Error(response.data.message);
     }
-    toast.dismiss(toastId);
-    dispatch(setLoading(false));
-  };
+    return { ok: true };
+  } catch (error) {
+    console.log("RESETPASSTOKEN ERROR............", error);
+    return {
+      error: error.response?.data?.message ?? "Couldn't send the email. Check your connection and try again.",
+      notFound: error.response?.status === 404,
+    };
+  }
 }
 
 export function resetPassword(password, confirmPassword, token, navigate) {
