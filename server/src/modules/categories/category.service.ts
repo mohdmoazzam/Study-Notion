@@ -34,11 +34,9 @@ export const getCategoryPageDetails = async (categoryId: string) => {
     .populate({ ...PUBLISHED_COURSES, populate: "ratingAndReviews" })
     .lean();
 
+  // A category without published courses is still a valid page; the client shows an empty state.
   if (!selectedCategory) {
     throw AppError.notFound("Category not found");
-  }
-  if (selectedCategory.course.length === 0) {
-    throw AppError.notFound("No courses found for the selected category.");
   }
 
   const [differentCategory, mostSellingCourses] = await Promise.all([

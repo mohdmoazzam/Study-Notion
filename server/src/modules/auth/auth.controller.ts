@@ -40,7 +40,14 @@ export const signUp = asyncHandler(async (req, res) => {
 
 export const logIn = asyncHandler(async (req, res) => {
   requireFields(req.body, ["email", "password"]);
-  const { token, user } = await authService.logIn(req.body.email, req.body.password);
+  const { email, password, accountType } = req.body;
+
+  // Optional for older clients; when sent, it must be a selectable login type.
+  if (accountType !== undefined && !authService.LOGIN_ACCOUNT_TYPES.includes(accountType)) {
+    throw AppError.badRequest("Invalid account type");
+  }
+
+  const { token, user } = await authService.logIn(email, password, accountType);
 
   res.cookie("token", token, authCookieOptions);
   sendSuccess(res, 200, { token, user, message: "Logged in successfully" });

@@ -91,13 +91,22 @@ export const signUp = async (input: SignUpInput) => {
   return publicUser;
 };
 
-export const logIn = async (email: string, password: string) => {
+export const LOGIN_ACCOUNT_TYPES = SELF_SIGNUP_ACCOUNT_TYPES;
+
+export const logIn = async (email: string, password: string, accountType?: AccountType) => {
   const user = await User.findOne({ email }).select("+password").populate("additionalDetails");
   if (!user) {
     throw AppError.notFound("User is not registered");
   }
   if (!(await bcrypt.compare(password, user.password))) {
     throw AppError.unauthorized("Entered password is incorrect.Try again");
+  }
+  // Checked after the password so the account's role isn't revealed to someone without it.
+  // Admins have no login option of their own, so they may sign in under either type.
+  if (accountType && user.accountType !== "Admin" && user.accountType !== accountType) {
+    throw AppError.forbidden(
+      `This is a ${user.accountType} account. Please select ${user.accountType} to log in.`
+    );
   }
 
   const token = jwt.sign(
