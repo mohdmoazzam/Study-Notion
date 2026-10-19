@@ -7,6 +7,15 @@ body {
   overflow-x: hidden;
 }
 
+/* `clip` hides sideways overflow without turning <body> into a scroll container,
+   which would break position: sticky. */
+@supports (overflow-x: clip) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+
 
 .spinner {
   width: 56px;
