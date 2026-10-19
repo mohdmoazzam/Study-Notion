@@ -19,7 +19,7 @@ export const courseContentPopulate = (subSectionSelect?: string): PopulateOption
 const fullCoursePopulate = (subSectionSelect?: string): PopulateOptions[] => [
   { path: "instructor", select: INSTRUCTOR_PUBLIC_FIELDS, populate: { path: "additionalDetails" } },
   { path: "category" },
-  { path: "ratingAndReviews" },
+  { path: "ratingAndReviews", populate: { path: "user", select: "firstName lastName image" } },
   courseContentPopulate(subSectionSelect),
 ];
 
