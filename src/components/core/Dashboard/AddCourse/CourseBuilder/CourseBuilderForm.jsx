@@ -15,6 +15,7 @@ import {
   updateSection,
 } from "../../../../../services/operations/courseDetailsAPI";
 import NestedView from "./NestedView";
+import { cardClass, inputClass, secondaryButtonClass } from "../../../../common/formUi";
 
 const CourseBuilderForm = () => {
   const {
@@ -91,21 +92,24 @@ const CourseBuilderForm = () => {
   };
 
   return (
-    <div className="space-y-8 rounded-md border-[1px] border-richblack-700 bg-richblack-800 p-6">
-      <p className="text-2xl font-semibold text-richblack-5">Course Builder</p>
+    <div className={`${cardClass} space-y-8`}>
+      <div>
+        <h2 className="text-lg font-semibold text-content">Course builder</h2>
+        <p className="mt-1 text-sm text-content-muted">Group your lectures into sections. Every section needs at least one lecture.</p>
+      </div>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="flex flex-col space-y-2">
-          <label className="text-sm text-richblack-5" htmlFor="sectionName">
-            Section name <sup className="text-pink-200">*</sup>
+          <label className="text-sm font-medium text-content" htmlFor="sectionName">
+            Section name <span className="text-danger">*</span>
           </label>
           <input
             id="sectionName"
             placeholder="Add section name"
             {...register("sectionName", { required: true })}
-            className="form-style w-full"
+            className={inputClass(errors.sectionName)}
           />
           {errors.sectionName && (
-            <span className="ml-2 text-xs tracking-wide text-pink-200">
+            <span className="text-xs text-danger">
               Section name is required
             </span>
           )}
@@ -123,20 +127,20 @@ const CourseBuilderForm = () => {
             <button
               type="button"
               onClick={cancelEdit}
-              className="text-sm text-richblack-300 underline"
+              className="text-sm font-medium text-content-muted underline"
             >
               Cancel Edit
             </button>
           )}
         </div>
       </form>
-      {course.courseContent.length > 0 && (
+      {course?.courseContent?.length > 0 && (
         <NestedView handleChangeEditSectionName={handleChangeEditSectionName} />
       )}
       <div className="flex justify-end gap-x-3">
         <button
           onClick={goBack}
-          className={`flex cursor-pointer items-center gap-x-2 rounded-md bg-richblack-700 py-[8px] px-[20px] font-semibold text-richblack-5`}
+          className={secondaryButtonClass}
         >
           Back
         </button>

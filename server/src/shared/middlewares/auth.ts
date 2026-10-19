@@ -25,9 +25,10 @@ export const authenticate: RequestHandler = (req, _res, next) => {
 };
 
 const requireRole =
-  (role: AccountType, label: string): RequestHandler =>
+  (roles: AccountType | AccountType[], label: string): RequestHandler =>
   (req, _res, next) => {
-    if (req.user?.accountType !== role) {
+    const allowed = Array.isArray(roles) ? roles : [roles];
+    if (!req.user || !allowed.includes(req.user.accountType)) {
       return next(AppError.forbidden(`This is a protected route for ${label} only`));
     }
     next();
@@ -36,3 +37,4 @@ const requireRole =
 export const isStudent = requireRole("Student", "students");
 export const isInstructor = requireRole("Instructor", "instructor");
 export const isAdmin = requireRole("Admin", "Admin");
+export const isInstructorOrAdmin = requireRole(["Instructor", "Admin"], "instructors and admins");

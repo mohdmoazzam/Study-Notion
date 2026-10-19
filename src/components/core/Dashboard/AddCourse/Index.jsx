@@ -1,37 +1,60 @@
-import RenderSteps from "./RenderSteps";
+import { useEffect, useState } from "react"
+import { FiCheck, FiZap } from "react-icons/fi"
+import { useDispatch } from "react-redux"
+
+import { resetCourseState } from "../../../../slices/courseSlice"
+import RenderSteps from "./RenderSteps"
+
+const TIPS = [
+  "Use a clear, specific title. It's the first thing students see.",
+  "Thumbnail: 16:9 JPG or PNG, at least 1024×576.",
+  "Write one learning outcome per line. Each becomes a ✓ point on your course page.",
+  "List requirements so students know what they need before starting.",
+  "In the Course Builder, group lectures into sections.",
+  "Your course stays a draft until you publish it.",
+]
 
 export default function AddCourse() {
+  const dispatch = useDispatch()
+  // Start from a clean slate: a previously edited or half-created course must not leak into this form.
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    dispatch(resetCourseState())
+    setReady(true)
+    return () => {
+      dispatch(resetCourseState())
+    }
+  }, [dispatch])
+
   return (
-    <>
-      <div className="flex w-full items-start gap-x-6">
-        <div className="flex flex-1 flex-col">
-          <h1 className="mb-14 text-3xl font-medium text-richblack-5">
-            Add Course
-          </h1>
-          <div className="flex-1">
-            <RenderSteps />
-          </div>
-        </div>
-        <div className="sticky top-10 hidden max-w-[400px] flex-1 rounded-md border-[1px] border-richblack-700 bg-richblack-800 p-6 xl:block">
-          <p className="mb-8 text-lg text-richblack-5">Course Upload Tips</p>
-          <ul className="ml-5 list-item list-disc space-y-4 text-xs text-richblack-5">
-            <li>Set the Course Price option or make it free.</li>
-            <li>Standard size for the course thumbnail is 1024x576.</li>
-            <li>Video section controls the course overview video.</li>
-            <li>Course Builder is where you create & organize a course.</li>
-            <li>
-              Add Topics in the Course Builder section to create lessons,
-              quizzes, and assignments.
-            </li>
-            <li>
-              Information from the Additional Data section shows up on the
-              course single page.
-            </li>
-            <li>Make Announcements to notify any important</li>
-            <li>Notes to all enrolled students at once.</li>
+    <div className="flex w-full items-start gap-8">
+      <div className="min-w-0 flex-1">
+        <h1 className="text-3xl font-bold tracking-tight text-content">Add course</h1>
+        <p className="mt-1 text-content-muted">
+          Create your course in three steps. It stays a draft until you publish it.
+        </p>
+        <div className="mt-8">{ready && <RenderSteps />}</div>
+      </div>
+
+      <aside className="sticky top-6 hidden w-80 shrink-0 xl:block">
+        <div className="rounded-2xl border border-line bg-surface p-6 shadow-sm">
+          <h2 className="flex items-center gap-2 font-semibold text-content">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-selected text-accent">
+              <FiZap aria-hidden="true" />
+            </span>
+            Course upload tips
+          </h2>
+          <ul className="mt-5 space-y-3">
+            {TIPS.map((tip) => (
+              <li key={tip} className="flex gap-2.5 text-sm text-content-muted">
+                <FiCheck aria-hidden="true" className="mt-0.5 shrink-0 text-accent" />
+                {tip}
+              </li>
+            ))}
           </ul>
         </div>
-      </div>
-    </>
-  );
+      </aside>
+    </div>
+  )
 }

@@ -8,7 +8,7 @@ export interface ICategory {
 
 const categorySchema = new Schema<ICategory>({
   name: { type: String, required: true, trim: true },
-  description: { type: String, required: true },
+  description: { type: String, default: "" },
   course: [{ type: Schema.Types.ObjectId, ref: "Course" }],
 });
 

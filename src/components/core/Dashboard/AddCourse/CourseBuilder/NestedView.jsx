@@ -53,12 +53,12 @@ const NestedView = ({ handleChangeEditSectionName }) => {
   return (
     <div>
       <div
-        className="rounded-lg bg-richblack-700 p-6 px-8"
+        className="rounded-xl border border-line bg-page p-4 sm:p-6"
         id="nestedViewContainer"
       >
         {course.courseContent?.map((section) => (
           <details key={section?._id} open>
-            <summary className="flex cursor-pointer items-center justify-between border-b-2 border-b-richblack-600 py-2">
+            <summary className="flex cursor-pointer items-center justify-between border-b border-b-line py-3">
               <div className="flex items-center gap-x-3">
                 <RxDropdownMenu className="text-2xl text-richblack-50" />
                 <p className="font-semibold text-richblack-50">
@@ -101,7 +101,7 @@ const NestedView = ({ handleChangeEditSectionName }) => {
                 <div
                   key={data?._id}
                   onClick={() => setViewSubSection(data)}
-                  className="flex cursor-pointer items-center justify-between gap-x-3 border-b-2 border-b-richblack-600 py-2"
+                  className="flex cursor-pointer items-center justify-between gap-x-3 border-b border-b-line py-2 transition hover:bg-surface"
                 >
                   <div className="flex items-center gap-x-3 py-2">
                     <RxDropdownMenu className="text-2xl text-richblack-50" />
@@ -141,7 +141,7 @@ const NestedView = ({ handleChangeEditSectionName }) => {
               ))}
               <button
                 onClick={() => setAddSubSection(section._id)}
-                className="mt-3 flex items-center gap-x-1 text-accent"
+                className="mt-3 flex items-center gap-x-1 rounded-lg px-2 py-1 font-semibold text-accent transition hover:bg-selected"
               >
                 <AiOutlinePlus className="text-lg" />
                 <p>Add Lecture</p>

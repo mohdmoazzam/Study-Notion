@@ -17,6 +17,7 @@ export interface ICourse {
   studentsEnrolled: Types.ObjectId[];
   instructions: string[];
   status?: CourseStatus;
+  language: string;
   createdAt: Date;
 }
 
@@ -34,6 +35,8 @@ const courseSchema = new Schema<ICourse>({
   studentsEnrolled: [{ type: Schema.Types.ObjectId, required: true, ref: "user" }],
   instructions: { type: [String] },
   status: { type: String, enum: COURSE_STATUSES, index: true },
+  // Language the course is taught in; older courses default to English.
+  language: { type: String, trim: true, default: "English" },
   createdAt: { type: Date, default: Date.now },
 });
 

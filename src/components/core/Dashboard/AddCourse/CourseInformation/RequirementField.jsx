@@ -1,70 +1,79 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react"
+import { FiPlus, FiTrash2 } from "react-icons/fi"
 import { useSelector } from "react-redux"
 
-const RequirementField = ({ name, label, register, errors, setValue, getValues }) => {
+import { Field, inputClass, secondaryButtonClass } from "../../../../common/formUi"
 
+// List input: type a requirement and press Enter (or Add); each one can be removed.
+const RequirementField = ({ name, label, register, errors, setValue }) => {
   const { editCourse, course } = useSelector((state) => state.course)
-  const [requirement, setRequirement] = useState("");
-  const [requirementList, setRequirementsList] = useState([]);
-
-
-  useEffect(() => {
-    if (editCourse) {
-      setRequirementsList(course?.instructions)
-    }
-    register(name, { required: true, validate: (value) => value.length > 0 })
-  }, [])
-
-  const handleAddRequirement = () => {
-    if (requirement) {
-      setRequirementsList([...requirementList, requirement]);
-      setRequirement("");
-    }
-  };
+  const [requirement, setRequirement] = useState("")
+  const [requirementList, setRequirementList] = useState(() => (editCourse ? course?.instructions ?? [] : []))
 
   useEffect(() => {
-    register(name, { required: true, validate: (value) => value.length > 0 });
-  }, []);
+    register(name, { validate: (value) => value?.length > 0 || "Add at least one requirement" })
+  }, [register, name])
 
   useEffect(() => {
-    setValue(name, requirementList);
-  }, [requirementList]);
+    setValue(name, requirementList)
+  }, [requirementList, name, setValue])
 
-  const handleRemoveRequirement = (index) => {
-    const updatedRequirementList = [...requirementList];
-    updatedRequirementList.splice(index, 1);
-    setRequirementsList(updatedRequirementList);
-  };
+  const addRequirement = () => {
+    const value = requirement.trim()
+    if (value) setRequirementList([...requirementList, value])
+    setRequirement("")
+  }
 
   return (
-    <div className="flex flex-col space-y-2">
-      <label className="text-sm text-richblack-5" htmlFor={name}>
-        {label} <sup className="text-pink-200">*</sup>
-      </label>
-      <div className="flex flex-col items-start space-y-2">
-        <input type="text" id={name} value={requirement} onChange={(e) => setRequirement(e.target.value)} className="form-style w-full" />
-        <button type="button" onClick={handleAddRequirement} className="font-semibold text-accent" > Add </button>
+    <Field
+      label={label}
+      htmlFor={name}
+      required
+      hint="What should students know or have before starting?"
+      error={errors[name]?.message}
+    >
+      <div className="flex gap-2">
+        <input
+          id={name}
+          type="text"
+          value={requirement}
+          onChange={(event) => setRequirement(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault()
+              addRequirement()
+            }
+          }}
+          placeholder="e.g. Basic programming knowledge"
+          className={inputClass(errors[name])}
+        />
+        <button type="button" onClick={addRequirement} className={`${secondaryButtonClass} shrink-0 px-4`}>
+          <FiPlus aria-hidden="true" /> Add
+        </button>
       </div>
 
       {requirementList.length > 0 && (
-        <ul className="mt-2 list-inside list-disc">
-          {requirementList.map((requirement, index) => (
-            <li key={index} className="flex items-center text-richblack-5">
-              <span>{requirement}</span>
-              <button type="button" onClick={() => handleRemoveRequirement(index)} className="ml-2 text-xs text-pure-greys-300">
-                Clear
+        <ul className="mt-2 divide-y divide-line overflow-hidden rounded-lg border border-line">
+          {requirementList.map((item, index) => (
+            <li key={`${item}-${index}`} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+              <span className="flex min-w-0 items-center gap-2.5 text-content">
+                <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-content-subtle" />
+                <span className="truncate">{item}</span>
+              </span>
+              <button
+                type="button"
+                aria-label={`Remove ${item}`}
+                onClick={() => setRequirementList(requirementList.filter((_, i) => i !== index))}
+                className="shrink-0 rounded-md p-1 text-content-subtle transition hover:bg-page hover:text-danger"
+              >
+                <FiTrash2 aria-hidden="true" />
               </button>
             </li>
           ))}
         </ul>
       )}
-      {errors[name] && (
-        <span className="ml-2 text-xs tracking-wide text-pink-200">
-          {label} is required
-        </span>
-      )}
-    </div>
-  );
-};
+    </Field>
+  )
+}
 
-export default RequirementField;
+export default RequirementField

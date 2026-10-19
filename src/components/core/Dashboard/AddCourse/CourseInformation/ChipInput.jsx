@@ -1,83 +1,84 @@
-import React, { useEffect, useState } from "react";
-import { MdClose } from "react-icons/md";
-import { useSelector } from "react-redux";
+import { useEffect, useState } from "react"
+import { FiX } from "react-icons/fi"
+import { useSelector } from "react-redux"
 
-const ChipInput = ({
-  label,
-  name,
-  placeholder,
-  register,
-  errors,
-  setValue,
-}) => {
-  const { editCourse, course } = useSelector((state) => state.course);
-  const [chips, setChips] = useState([]);
+import { Field } from "../../../../common/formUi"
+
+// Tag input: Enter or comma adds a tag, Backspace on an empty input removes the last one.
+const ChipInput = ({ label, name, placeholder, register, errors, setValue }) => {
+  const { editCourse, course } = useSelector((state) => state.course)
+  const [chips, setChips] = useState(() => (editCourse ? course?.tag ?? [] : []))
+  const [text, setText] = useState("")
 
   useEffect(() => {
-    if (editCourse) {
-      setChips(course?.tag);
-    }
-    register(name, { required: true, validate: (value) => value.length > 0 });
-  }, []);
+    register(name, { validate: (value) => value?.length > 0 || "Add at least one tag" })
+  }, [register, name])
 
   useEffect(() => {
-    setValue(name, chips);
-  }, [chips]);
+    setValue(name, chips)
+  }, [chips, name, setValue])
+
+  const addChip = (value) => {
+    const chip = value.trim()
+    if (chip && !chips.includes(chip)) setChips([...chips, chip])
+    setText("")
+  }
 
   const handleKeyDown = (event) => {
     if (event.key === "Enter" || event.key === ",") {
-      event.preventDefault();
-      const chipValue = event.target.value.trim();
-      if (chipValue && !chips.includes(chipValue)) {
-        const newChips = [...chips, chipValue];
-        setChips(newChips);
-        event.target.value = "";
-      }
+      event.preventDefault()
+      addChip(text)
+    } else if (event.key === "Backspace" && !text && chips.length) {
+      setChips(chips.slice(0, -1))
     }
-  };
+  }
 
-  const handleDeleteChip = (chipIndex) => {
-    const newChips = chips.filter((_, index) => index !== chipIndex);
-    setChips(newChips);
-  };
+  const invalid = Boolean(errors[name])
 
   return (
-    <div className="flex flex-col space-y-2">
-      <label className="text-sm text-richblack-5" htmlFor={name}>
-        {label} <sup className="text-pink-200">*</sup>
-      </label>
-      <div className="flex w-full flex-wrap gap-y-2">
+    <Field
+      label={label}
+      htmlFor={name}
+      required
+      hint="Press Enter or comma to add a tag."
+      error={errors[name]?.message}
+    >
+      <div
+        className={`flex flex-wrap items-center gap-2 rounded-lg border bg-field px-2.5 py-2 transition focus-within:ring-2 ${
+          invalid
+            ? "border-danger focus-within:ring-danger/20"
+            : "border-line focus-within:border-brand focus-within:ring-brand/30"
+        }`}
+      >
         {chips.map((chip, index) => (
-          <div
-            key={index}
-            className="m-1 flex items-center rounded-full bg-yellow-400 px-2 py-1 text-sm text-richblack-5"
+          <span
+            key={chip}
+            className="inline-flex items-center gap-1 rounded-full bg-selected py-1 pl-3 pr-1.5 text-sm font-medium text-accent"
           >
             {chip}
             <button
               type="button"
-              className="ml-2 focus:outline-none"
-              onClick={() => handleDeleteChip(index)}
+              aria-label={`Remove ${chip}`}
+              onClick={() => setChips(chips.filter((_, i) => i !== index))}
+              className="rounded-full p-0.5 transition hover:bg-brand/20"
             >
-              <MdClose className="text-sm" />
+              <FiX aria-hidden="true" className="text-xs" />
             </button>
-          </div>
+          </span>
         ))}
         <input
           id={name}
-          name={name}
           type="text"
-          placeholder={placeholder}
+          value={text}
+          onChange={(event) => setText(event.target.value)}
           onKeyDown={handleKeyDown}
-          className="form-style w-full"
+          onBlur={() => text && addChip(text)}
+          placeholder={chips.length ? "" : placeholder}
+          className="min-w-[8rem] flex-1 bg-transparent px-1 py-0.5 text-content outline-none placeholder:text-content-subtle"
         />
       </div>
-      {errors[name] && (
-        <span className="ml-2 text-xs tracking-wide text-pink-200">
-          {label} is required
-        </span>
-      )}
-    </div>
-  );
-};
+    </Field>
+  )
+}
 
-export default ChipInput;
+export default ChipInput

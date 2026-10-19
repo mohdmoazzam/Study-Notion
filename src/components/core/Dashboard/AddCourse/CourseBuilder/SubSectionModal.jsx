@@ -10,6 +10,7 @@ import { setCourse } from "../../../../../slices/courseSlice";
 import { RxCross1 } from "react-icons/rx";
 import Upload from "../Upload";
 import IconBtn from "../../../../common/IconBtn";
+import { inputClass } from "../../../../common/formUi";
 
 const SubSectionModal = ({
   modalData,
@@ -36,7 +37,8 @@ const SubSectionModal = ({
       setValue("lectureDesc", modalData.description);
       setValue("lectureVideo", modalData.videoUrl);
     }
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const isFormUpdated = () => {
     const currentValues = getValues();
     if (
@@ -107,13 +109,13 @@ const SubSectionModal = ({
   };
   return (
     <div className="fixed inset-0 z-[1000] !mt-0 grid h-screen w-screen place-items-center overflow-auto bg-black bg-opacity-40 backdrop-blur-sm">
-      <div className="my-10 w-11/12 max-w-[700px] rounded-lg border border-richblack-400 bg-richblack-800">
-        <div className="flex items-center justify-between rounded-t-lg bg-richblack-700 p-5">
-          <p className="text-xl font-semibold text-richblack-5">
+      <div className="my-10 w-11/12 max-w-[700px] overflow-hidden rounded-2xl border border-line bg-surface shadow-xl">
+        <div className="flex items-center justify-between border-b border-line px-6 py-4">
+          <p className="text-lg font-semibold text-content">
             {view && "Viewing"} {add && "Adding"} {edit && "Editing"} Lecture
           </p>
           <button onClick={() => (!loading ? setModalData(null) : {})}>
-            <RxCross1 className="text-2xl text-richblack-5" />
+            <RxCross1 className="text-xl text-content-muted hover:text-content" />
           </button>
         </div>
         <form
@@ -139,7 +141,7 @@ const SubSectionModal = ({
               id="lectureTitle"
               placeholder="Enter title"
               {...register("lectureTitle", { required: true })}
-              className="form-style w-full"
+              className={inputClass(errors.lectureTitle)}
             />
             {errors.lectureTitle && (
               <span className="ml-2 text-xs tracking-wide text-pink-200">
@@ -158,7 +160,7 @@ const SubSectionModal = ({
               id="lectureDesc"
               placeholder="Enter description"
               {...register("lectureDesc", { required: true })}
-              className="form-style resize-x-none min-h-[130px] w-full"
+              className={`${inputClass(errors.lectureDesc)} min-h-[130px] resize-y`}
             />
             {errors.lectureDesc && (
               <span className="ml-2 text-xs tracking-wide text-pink-200">

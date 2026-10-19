@@ -11,7 +11,22 @@ const CARD_POPULATE = [
 const PUBLISHED_COURSES = { path: "course", match: { status: "Published" }, populate: CARD_POPULATE };
 const TOP_SELLING_LIMIT = 10;
 
-export const createCategory = (name: string, description: string) => Category.create({ name, description });
+// "  web   development " -> "Web development": trimmed, single spaces, first letter capitalized.
+export const normalizeCategoryName = (name: string): string => {
+  const cleaned = name.trim().replace(/\s+/g, " ");
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+};
+
+// Creates the category unless one with the same name exists (case-insensitive); then returns that one.
+export const createCategory = async (name: string, description = "") => {
+  const normalized = normalizeCategoryName(name);
+  const existing = await Category.findOne({ name: normalized }).collation({ locale: "en", strength: 2 }).lean();
+  if (existing) {
+    return { category: existing, created: false };
+  }
+  const category = await Category.create({ name: normalized, description: description.trim() });
+  return { category: category.toObject(), created: true };
+};
 
 export const listCategories = () => Category.find({}).lean();
 

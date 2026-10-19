@@ -1,86 +1,91 @@
-import React, { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { useDispatch, useSelector } from "react-redux";
-import IconBtn from "../../../../common/IconBtn";
-import { resetCourseState, setStep } from "../../../../../slices/courseSlice";
-import { COURSE_STATUS } from "../../../../../utils/constants";
-import { editCourseDetails } from "../../../../../services/operations/courseDetailsAPI";
+import { useEffect, useState } from "react"
+import { useForm } from "react-hook-form"
+import { FiArrowLeft, FiEye, FiEyeOff } from "react-icons/fi"
+import { useDispatch, useSelector } from "react-redux"
+import { useNavigate } from "react-router-dom"
+
+import { editCourseDetails } from "../../../../../services/operations/courseDetailsAPI"
+import { resetCourseState, setStep } from "../../../../../slices/courseSlice"
+import { COURSE_STATUS } from "../../../../../utils/constants"
+import { cardClass, primaryButtonClass, secondaryButtonClass } from "../../../../common/formUi"
 
 const PublishCourse = () => {
-  const { register, handleSubmit, setValue, getValues } = useForm();
-  const dispatch = useDispatch();
-  const { token } = useSelector((state) => state.auth);
-  const { course } = useSelector((state) => state.course);
-  const [loading, setLoading] = useState(false);
+  const { register, handleSubmit, setValue, watch } = useForm()
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
+  const { token } = useSelector((state) => state.auth)
+  const { course } = useSelector((state) => state.course)
+  const [loading, setLoading] = useState(false)
+  const isPublic = watch("public", false)
 
   useEffect(() => {
-    if (course?.status === COURSE_STATUS.PUBLISHED) {
-      setValue("public", true);
-    }
-  }, []);
+    setValue("public", course?.status === COURSE_STATUS.PUBLISHED)
+  }, [course, setValue])
 
-  const goBack = () => {
-    dispatch(setStep(2));
-  };
-
+  // Done: clear the in-progress course and go to the instructor's course list.
   const goToCourses = () => {
-    dispatch(resetCourseState());
-    //navigate
-  };
+    dispatch(resetCourseState())
+    navigate("/dashboard/my-courses")
+  }
 
-  const handleCoursePublish = async () => {
-    if (
-      (course?.status === COURSE_STATUS.PUBLISHED &&
-        getValues("public") === true) ||
-      (course.status === COURSE_STATUS.DRAFT && getValues("public") === false)
-    ) {
-      goToCourses();
-      return;
+  const onSubmit = async ({ public: makePublic }) => {
+    const nextStatus = makePublic ? COURSE_STATUS.PUBLISHED : COURSE_STATUS.DRAFT
+    if (course?.status === nextStatus) {
+      goToCourses()
+      return
     }
-    const formData = new FormData();
-    formData.append("courseId", course._id);
-    const courseStatus = getValues("public")
-      ? COURSE_STATUS.PUBLISHED
-      : COURSE_STATUS.DRAFT;
-    formData.append("status", courseStatus);
+    const formData = new FormData()
+    formData.append("courseId", course._id)
+    formData.append("status", nextStatus)
 
-    setLoading(true);
-    const result = await editCourseDetails(formData, token);
+    setLoading(true)
+    const result = await editCourseDetails(formData, token)
+    setLoading(false)
+    if (result) goToCourses()
+  }
 
-    if (result) {
-      goToCourses();
-    }
-    setLoading(false);
-  };
-
-  const onSubmit = () => {
-    handleCoursePublish();
-  };
   return (
-    <div className="rounded-md border-[1px] bg-richblack-800 p-6 border-richblack-700">
-      <p className="text-2xl font-semibold text-richblack-5">Publish Course</p>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="my-6 mb-8">
-          <label htmlFor="public" className="inline-flex items-center text-lg">
-            <input
-              type="checkbox"
-              id="public"
-              {...register("public")}
-              className="border-gray-300 h-4 w-4 rounded bg-richblack-500 text-richblack-400 focus:ring-2 focus:ring-richblack-5"
-            />
-            <span className="ml-2 text-richblack-400">Make this course as public</span>
-          </label>
-        </div>
+    <form onSubmit={handleSubmit(onSubmit)} className={cardClass}>
+      <h2 className="text-lg font-semibold text-content">Publish course</h2>
+      <p className="mt-1 text-sm text-content-muted">
+        Choose who can see this course. You can change this any time.
+      </p>
 
-        <div className="ml-auto flex max-w-max items-center gap-x-4">
-          <button disabled={loading} type="button" onClick={goBack} className="flex cursor-pointer items-center gap-x-2 rounded-md bg-richblack-700 py-[8px] px-[20px] font-semibold text-on-brand">
-            Back
-          </button>
-          <IconBtn disabled={loading} text="Save Changes" />
-        </div>
-      </form>
-    </div>
-  );
-};
+      <label
+        htmlFor="public"
+        className={`mt-6 flex cursor-pointer items-start gap-4 rounded-xl border p-5 transition ${
+          isPublic ? "border-brand bg-selected" : "border-line bg-page hover:border-content-subtle"
+        }`}
+      >
+        <input
+          type="checkbox"
+          id="public"
+          className="mt-1 h-5 w-5 shrink-0 cursor-pointer rounded accent-[rgb(var(--color-brand))]"
+          {...register("public")}
+        />
+        <span>
+          <span className="flex items-center gap-2 font-semibold text-content">
+            {isPublic ? <FiEye aria-hidden="true" /> : <FiEyeOff aria-hidden="true" />}
+            Make this course public
+          </span>
+          <span className="mt-1 block text-sm text-content-muted">
+            {isPublic
+              ? "Students can find this course in the catalog and enroll."
+              : "The course stays a private draft that only you can see."}
+          </span>
+        </span>
+      </label>
 
-export default PublishCourse;
+      <div className="mt-8 flex flex-wrap justify-end gap-3">
+        <button type="button" disabled={loading} onClick={() => dispatch(setStep(2))} className={secondaryButtonClass}>
+          <FiArrowLeft aria-hidden="true" /> Back
+        </button>
+        <button type="submit" disabled={loading} className={primaryButtonClass}>
+          {loading ? "Saving..." : "Save changes"}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+export default PublishCourse

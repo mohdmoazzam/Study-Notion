@@ -24,6 +24,7 @@ import Footer from "../components/common/Footer"
 import LinkButton from "../components/common/LinkButton"
 import CourseContent from "../components/core/course/CourseContent"
 import CourseGlance from "../components/core/course/CourseGlance"
+import InstructorCard from "../components/core/course/InstructorCard"
 import CoursePurchaseCard, { primaryButton } from "../components/core/course/CoursePurchaseCard"
 import CourseReviews from "../components/core/course/CourseReviews"
 import LearningOutcomes, { parseOutcomes } from "../components/core/course/LearningOutcomes"
@@ -203,6 +204,8 @@ export const CourseDetails = () => {
   const instructor = course.instructor
   const instructorName = [instructor?.firstName, instructor?.lastName].filter(Boolean).join(" ")
   const createdOn = formattedDate(getCreatedAt(course))
+  // Courses created before the language field existed default to English.
+  const courseLanguage = course.language || "English"
   const isEnrolled = Boolean(user && course.studentsEnrolled?.includes(user._id))
   const requirements = (course.instructions ?? []).filter((item) => item?.trim())
   const outcomeCount = parseOutcomes(course.whatYouWillLearn).length
@@ -212,7 +215,7 @@ export const CourseDetails = () => {
     { Icon: FiPlayCircle, label: "Lectures", value: lectureCount },
     { Icon: FiClock, label: "Total length", value: details.totalDuration },
     { Icon: FiUsers, label: "Students", value: studentCount },
-    { Icon: FiGlobe, label: "Language", value: "English" },
+    { Icon: FiGlobe, label: "Language", value: courseLanguage },
     createdOn && { Icon: FiCalendar, label: "Created", value: createdOn },
   ].filter(Boolean)
 
@@ -277,7 +280,7 @@ export const CourseDetails = () => {
                 {studentCount} {studentCount === 1 ? "student" : "students"}
               </MetaPill>
               {details.totalDuration && <MetaPill Icon={FiClock}>{details.totalDuration} total</MetaPill>}
-              <MetaPill Icon={FiGlobe}>English</MetaPill>
+              <MetaPill Icon={FiGlobe}>{courseLanguage}</MetaPill>
               {createdOn && <MetaPill Icon={FiCalendar}>Created {createdOn}</MetaPill>}
             </div>
 
@@ -343,19 +346,7 @@ export const CourseDetails = () => {
 
           {instructor && (
             <Section id="course-instructor" title="Your instructor" Icon={FiUser}>
-              <div className="flex flex-col items-center gap-5 rounded-2xl border border-line bg-gradient-to-br from-selected to-surface p-6 text-center sm:flex-row sm:text-left">
-                <img
-                  src={avatarFor(instructor)}
-                  alt=""
-                  className="h-20 w-20 shrink-0 rounded-full object-cover ring-4 ring-surface"
-                />
-                <div>
-                  <p className="text-xl font-bold text-content">{instructorName}</p>
-                  <p className="mt-2 text-content-muted">
-                    {instructor.additionalDetails?.about || "This instructor hasn't added a bio yet."}
-                  </p>
-                </div>
-              </div>
+              <InstructorCard instructor={instructor} stats={details.instructorStats} />
             </Section>
           )}
 

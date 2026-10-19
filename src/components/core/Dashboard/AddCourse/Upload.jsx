@@ -1,12 +1,14 @@
-import React, { useEffect, useRef, useState } from "react";
-import { useDropzone } from "react-dropzone";
-import { FiUploadCloud } from "react-icons/fi";
-import "video-react/dist/video-react.css";
-import { Player } from "video-react";
+import { useEffect, useState } from "react"
+import { useDropzone } from "react-dropzone"
+import { FiImage, FiUploadCloud, FiVideo } from "react-icons/fi"
+import { Player } from "video-react"
+import "video-react/dist/video-react.css"
 
+// Image/video picker with preview. Form value: the new File, or the existing URL when editing/viewing.
 const Upload = ({
   name,
   label,
+  hideLabel = false,
   register,
   setValue,
   errors,
@@ -14,106 +16,112 @@ const Upload = ({
   viewData = null,
   editData = null,
 }) => {
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [previewSource, setPreviewSource] = useState(
-    viewData ? viewData : editData ? editData : ""
-  );
-  const inputRef = useRef(null);
-
-  const onDrop = (acceptedFiles) => {
-    const file = acceptedFiles[0];
-    if (file) {
-      previewFile(file);
-      setSelectedFile(file);
-    }
-  };
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: !video
-      ? { "image/*": [".jpeg", ".jpg", ".png"] }
-      : { "video/*": [".mp4"] },
-    onDrop,
-  });
+  const existing = viewData || editData || ""
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [previewSource, setPreviewSource] = useState(existing)
 
   const previewFile = (file) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onloadend = () => {
-      setPreviewSource(reader.result);
-    };
-  };
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onloadend = () => setPreviewSource(reader.result)
+  }
+
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
+    accept: video ? { "video/*": [".mp4"] } : { "image/*": [".jpeg", ".jpg", ".png"] },
+    multiple: false,
+    noClick: Boolean(previewSource),
+    disabled: Boolean(viewData),
+    onDrop: ([file]) => {
+      if (!file) return
+      setSelectedFile(file)
+      previewFile(file)
+    },
+  })
 
   useEffect(() => {
-    register(name, { required: true });
-  }, [register]);
+    register(name, { required: true })
+  }, [register, name])
 
+  // Keep the existing upload as the value until it is replaced or removed, so editing doesn't
+  // force a re-upload and unchanged media is not re-sent.
   useEffect(() => {
-    setValue(name, selectedFile);
-  }, [selectedFile, setValue]);
+    setValue(name, selectedFile || (previewSource ? existing || null : null))
+  }, [selectedFile, previewSource, existing, name, setValue])
+
+  const remove = () => {
+    setSelectedFile(null)
+    setPreviewSource("")
+  }
+
+  const kind = video ? "video" : "image"
 
   return (
-    <div className="flex flex-col space-y-2">
-      <label className="text-sm text-richblack-5" htmlFor={name}>
-        {label} {!viewData && <sup className="text-pink-200">*</sup>}
-      </label>
-      <div
-        className={`${
-          isDragActive ? "bg-richblack-600" : "bg-richblack-700"
-        } flex min-h-[250px] cursor-pointer items-center justify-center rounded-md border-2 border-dotted border-richblack-500`}
-      >
+    <div className="flex flex-col gap-1.5">
+      {!hideLabel && (
+        <label htmlFor={name} className="text-sm font-medium text-content">
+          {label}
+          {!viewData && <span className="ml-0.5 text-danger">*</span>}
+        </label>
+      )}
+
+      <div {...getRootProps()} className="outline-none">
+        <input {...getInputProps()} id={name} />
         {previewSource ? (
-          <div className="flex w-full flex-col p-6">
-            {!video ? (
-              <img
-                src={previewSource}
-                alt="Preview"
-                className="h-full w-full rounded-md object-cover"
-              />
-            ) : (
+          <div className="overflow-hidden rounded-xl border border-line bg-page">
+            {video ? (
               <Player aspectRatio="16:9" playsInline src={previewSource} />
+            ) : (
+              <img src={previewSource} alt="" className="aspect-video w-full object-cover" />
             )}
             {!viewData && (
-              <button
-                type="button"
-                onClick={() => {
-                  setPreviewSource("");
-                  setSelectedFile(null);
-                  setValue(name, null);
-                }}
-                className="mt-3 text-richblack-400 underline"
-              >
-                Cancel
-              </button>
+              <div className="flex items-center justify-between gap-3 border-t border-line bg-surface px-4 py-3 text-sm">
+                <span className="truncate text-content-muted">{selectedFile?.name ?? `Current ${kind}`}</span>
+                <span className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    onClick={open}
+                    className="rounded-md px-2 py-1 font-semibold text-accent transition hover:bg-selected"
+                  >
+                    Replace
+                  </button>
+                  <button
+                    type="button"
+                    onClick={remove}
+                    className="rounded-md px-2 py-1 font-semibold text-content-muted transition hover:bg-page hover:text-danger"
+                  >
+                    Remove
+                  </button>
+                </span>
+              </div>
             )}
           </div>
         ) : (
           <div
-            className="flex w-full flex-col items-center p-6"
-            {...getRootProps()}
+            className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-12 text-center transition ${
+              isDragActive
+                ? "border-brand bg-selected"
+                : errors[name]
+                ? "border-danger bg-page"
+                : "border-line bg-page hover:border-brand"
+            }`}
           >
-            <input {...getInputProps()} ref={inputRef} />
-            <div className="grid aspect-square w-14 place-items-center rounded-full bg-richblack-700">
-              <FiUploadCloud className="text-2xl text-accent" />
-            </div>
-            <p className="mt-2 max-w-[200px] text-center text-sm text-richblack-200">
-              Drag and drop an {!video ? "image" : "video"}, or click to{" "}
-              <span className="font-semibold text-accent">Browse</span> a
-              file
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-selected text-xl text-accent">
+              <FiUploadCloud aria-hidden="true" />
+            </span>
+            <p className="mt-3 text-sm text-content">
+              Drag and drop an {kind}, or <span className="font-semibold text-accent">browse</span>
             </p>
-            <ul className="mt-10 flex list-disc justify-between space-x-12 text-center  text-xs text-richblack-200">
-              <li>Aspect ratio 16:9</li>
-              <li>Recommended size 1024x576</li>
-            </ul>
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-content-muted">
+              {video ? <FiVideo aria-hidden="true" /> : <FiImage aria-hidden="true" />}
+              {video ? "MP4 video" : "JPG or PNG · 16:9 · at least 1024×576"}
+            </p>
           </div>
         )}
       </div>
-      {errors[name] && (
-        <span className="ml-2 text-xs tracking-wide text-pink-200">
-          {label} is required
-        </span>
-      )}
-    </div>
-  );
-};
 
-export default Upload;
+      {errors[name] && <span className="text-xs text-danger">{label} is required</span>}
+    </div>
+  )
+}
+
+export default Upload
