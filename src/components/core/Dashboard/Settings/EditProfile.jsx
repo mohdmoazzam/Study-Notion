@@ -1,198 +1,121 @@
-import React from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { useForm } from "react-hook-form";
-import IconBtn from "../../../common/IconBtn";
-import { useNavigate } from "react-router-dom";
-import { updateProfile } from "../../../../services/operations/settingsAPI";
-const genders = ["Male", "Female", "Non-Binary", "Prefer not to say", "Other"];
+import { useForm } from "react-hook-form"
+import { useDispatch, useSelector } from "react-redux"
+
+import { updateProfile } from "../../../../services/operations/settingsAPI"
+import { Field, FormCard, inputClass, primaryButtonClass, secondaryButtonClass } from "../../../common/formUi"
+
+// Values match what is already stored for existing users.
+const GENDERS = ["Male", "Female", "Non-Binary", "Prefer not to say", "Other"]
+const ABOUT_MAX_LENGTH = 500
+const today = () => new Date().toISOString().split("T")[0]
+
+const valuesFrom = (user) => ({
+  firstName: user?.firstName ?? "",
+  lastName: user?.lastName ?? "",
+  dateOfBirth: user?.additionalDetails?.dateOfBirth ?? "",
+  gender: user?.additionalDetails?.gender ?? "",
+  contactNumber: user?.additionalDetails?.contactNumber ?? "",
+  about: user?.additionalDetails?.about ?? "",
+})
 
 const EditProfile = () => {
-  const { user } = useSelector((state) => state.profile);
-  const { token } = useSelector((state) => state.auth);
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.profile)
+  const { token } = useSelector((state) => state.auth)
+  const dispatch = useDispatch()
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
-  } = useForm();
+    reset,
+    watch,
+    formState: { errors, isDirty, isSubmitting },
+  } = useForm({ defaultValues: valuesFrom(user) })
+  const aboutLength = (watch("about") ?? "").length
 
-  const submitProfileForm = async (data) => {
-    try {
-      dispatch(updateProfile(token, data));
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  const onSubmit = async (data) => {
+    const saved = await dispatch(updateProfile(token, data))
+    // Make the saved values the new baseline so "Save" disables again.
+    if (saved) reset(data)
+  }
+
   return (
-    <div>
-      <form onSubmit={handleSubmit(submitProfileForm)}>
-        <div className="my-10 flex flex-col gap-y-6 rounded-md border-[1px] border-richblack-700 bg-richblack-800 p-8 px-12">
-          <h2 className="text-lg font-semibold text-richblack-5">
-            {" "}
-            Profile Information
-          </h2>
-          <div className="flex gap-5 lg:flex-row">
-            <div className="flex flex-col gap-2 lg:w-[48%]">
-              <label htmlFor="firstName" className="lable-style">
-                First Name
-              </label>
-              <input
-                type="text"
-                name="firstName"
-                id="firstName"
-                placeholder="Enter first name"
-                className="form-style"
-                {...register("firstName", { required: true })}
-                defaultValue={user?.firstName}
-              />
-              {errors.firstName && (
-                <span className="-mt-1 text-[12px] text-accent">
-                  Please enter your first name.
-                </span>
-              )}
-            </div>
-            <div className="flex flex-col gap-2 lg:w-[48%]">
-              <label htmlFor="lastName" className="lable-style">
-                Last Name
-              </label>
-              <input
-                type="text"
-                name="lastName"
-                id="lastName"
-                placeholder="Enter first name"
-                className="form-style"
-                {...register("lastName", { required: true })}
-                defaultValue={user?.lastName}
-              />
-              {errors.lastName && (
-                <span className="-mt-1 text-[12px] text-accent">
-                  Please enter your last name.
-                </span>
-              )}
-            </div>
-          </div>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate>
+      <FormCard id="personal-info" title="Personal information" description="Only your name is required; everything else is optional.">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="First name" htmlFor="firstName" required error={errors.firstName && "Please enter your first name"}>
+            <input id="firstName" autoComplete="given-name" className={inputClass(errors.firstName)} {...register("firstName", { required: true })} />
+          </Field>
+          <Field label="Last name" htmlFor="lastName" required error={errors.lastName && "Please enter your last name"}>
+            <input id="lastName" autoComplete="family-name" className={inputClass(errors.lastName)} {...register("lastName", { required: true })} />
+          </Field>
 
-          <div className="flex flex-col gap-5 lg:flex-row">
-            <div className=" flex flex-col gap-2 lg:w-[48%]">
-              <label htmlFor="dateOfBirth" className="lable-style">
-                Date of Birth
-              </label>
-              <input
-                type="date"
-                name="dateOfBirth"
-                id="dateOfBirth"
-                className="form-style"
-                {...register("dateOfBirth", {
-                  required: {
-                    value: true,
-                    message: "Please enter your Date of Birth.",
-                  },
-                  max: {
-                    value: new Date().toISOString().split("T")[0],
-                    message: "Date of Birth cannot be in the future.",
-                  },
-                })}
-                defaultValue={user?.additionalDetails?.dateOfBirth}
-              />
-              {errors.dateOfBirth && (
-                <span className="-mt-1 text-[12px] text-accent">
-                  {errors.dateOfBirth.message}
-                </span>
-              )}
-            </div>
-            <div className=" flex flex-col gap-2 lg:w-[48%]">
-              <label htmlFor="gender" className="lable-style">
-                Gender
-              </label>
-              <select
-                type="text"
-                name="gender"
-                id="gender"
-                className="form-style"
-                {...register("gender", { required: true })}
-                defaultValue={user?.additionalDetails?.gender}
-              >
-                {genders.map((ele, i) => {
-                  return (
-                    <option key={i} value={ele}>
-                      {ele}
-                    </option>
-                  );
-                })}
-              </select>
-              {errors.gender && (
-                <span className="-mt-1 text-[12px] text-accent">
-                  Please enter your Date of Birth.
-                </span>
-              )}
-            </div>
-          </div>
+          <Field label="Date of birth" htmlFor="dateOfBirth" error={errors.dateOfBirth?.message}>
+            <input
+              id="dateOfBirth"
+              type="date"
+              max={today()}
+              className={inputClass(errors.dateOfBirth)}
+              {...register("dateOfBirth", {
+                validate: (value) => !value || value <= today() || "Date of birth can't be in the future",
+              })}
+            />
+          </Field>
+          <Field label="Gender" htmlFor="gender">
+            <select id="gender" className={inputClass(false)} {...register("gender")}>
+              <option value="">Select gender</option>
+              {GENDERS.map((gender) => (
+                <option key={gender} value={gender}>
+                  {gender}
+                </option>
+              ))}
+            </select>
+          </Field>
 
-          <div className="flex flex-col gap-5 lg:flex-row">
-            <div className="flex flex-col gap-2 lg:w-[48%]">
-              <label htmlFor="contactNumber" className="lable-style">
-                Contact Number
-              </label>
-              <input
-                type="tel"
-                name="contactNumber"
-                id="contactNumber"
-                placeholder="Enter Contact Number"
-                className="form-style"
-                {...register("contactNumber", {
-                  required: {
-                    value: true,
-                    message: "Please enter your Contact Number.",
-                  },
-                  maxLength: { value: 12, message: "Invalid Contact Number" },
-                  minLength: { value: 10, message: "Invalid Contact Number" },
-                })}
-                defaultValue={user?.additionalDetails?.contactNumber}
-              />
-              {errors.contactNumber && (
-                <span className="-mt-1 text-[12px] text-accent">
-                  {errors.contactNumber.message}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-col gap-2 lg:w-[48%]">
-              <label htmlFor="about" className="lable-style">
-                About
-              </label>
-              <input
-                type="text"
-                name="about"
-                id="about"
-                placeholder="Enter Bio Details"
-                className="form-style"
-                {...register("about", { required: true })}
-                defaultValue={user?.additionalDetails?.about}
-              />
-              {errors.about && (
-                <span className="-mt-1 text-[12px] text-accent">
-                  Please enter your About.
-                </span>
-              )}
-            </div>
-          </div>
+          <Field label="Phone number" htmlFor="contactNumber" error={errors.contactNumber?.message}>
+            <input
+              id="contactNumber"
+              type="tel"
+              autoComplete="tel"
+              placeholder="+91 98765 43210"
+              className={inputClass(errors.contactNumber)}
+              {...register("contactNumber", {
+                pattern: { value: /^\+?[0-9][0-9\s-]{6,15}$/, message: "Please enter a valid phone number" },
+              })}
+            />
+          </Field>
         </div>
 
-        <div className="flex gap-2 justify-end">
+        <Field
+          label="About"
+          htmlFor="about"
+          hint={`${aboutLength}/${ABOUT_MAX_LENGTH} characters`}
+          error={errors.about && `Keep it under ${ABOUT_MAX_LENGTH} characters`}
+        >
+          <textarea
+            id="about"
+            rows={4}
+            placeholder="A few lines about you, your interests or what you teach."
+            className={`${inputClass(errors.about)} resize-y`}
+            {...register("about", { maxLength: ABOUT_MAX_LENGTH })}
+          />
+        </Field>
+
+        <div className="flex flex-wrap justify-end gap-3 border-t border-line pt-5">
           <button
-            onClick={() => {
-              navigate("/dashboard/my-profile");
-            }}
-            className="cursor-pointer rounded-md bg-richblack-700 py-2 px-5 font-semibold text-richblack-50"
+            type="button"
+            onClick={() => reset()}
+            disabled={!isDirty || isSubmitting}
+            className={secondaryButtonClass}
           >
-            Cancel
+            Discard
           </button>
-          <IconBtn type="submit" text="Save" />
+          <button type="submit" disabled={!isDirty || isSubmitting} className={primaryButtonClass}>
+            {isSubmitting ? "Saving..." : "Save changes"}
+          </button>
         </div>
-      </form>
-    </div>
-  );
-};
+      </FormCard>
+    </form>
+  )
+}
 
-export default EditProfile;
+export default EditProfile

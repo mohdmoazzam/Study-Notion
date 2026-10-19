@@ -1,10 +1,11 @@
 import "./App.css";
-import { Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { Route, Routes, useNavigate } from "react-router-dom";
 import Home from "./pages/Home";
 import { Navbar } from "./components/common/Navbar";
 import OpenRoute from "./components/core/Auth/OpenRoute";
 import Login from "./pages/Login";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Signup from "./pages/Signup";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import UpdatePassword from "./pages/UpdatePassword";
@@ -18,6 +19,7 @@ import Contact from "./pages/Contact";
 import EnrolledCourses from "./components/core/Dashboard/EnrolledCourses";
 import Cart from "./components/core/Dashboard/Cart/index";
 import { ACCOUNT_TYPE } from "./utils/constants";
+import { getUserDetails } from "./services/operations/profileAPI";
 import Settings from "./components/core/Dashboard/Settings/Index";
 import AddCourse from "./components/core/Dashboard/AddCourse/Index";
 import MyCourses from "./components/core/Dashboard/MyCourses";
@@ -30,6 +32,15 @@ import { Instructor } from "./components/core/Dashboard/InstructorDashboard/Inst
 
 function App() {
   const { user } = useSelector((state) => state.profile);
+  const { token } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  // The cached user (localStorage) renders instantly; refresh it from the server once per session.
+  useEffect(() => {
+    if (token) dispatch(getUserDetails(token, navigate));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   return (
     <div className="w-screen min-h-screen bg-richblack-900 flex flex-col font-inter">

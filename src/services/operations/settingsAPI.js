@@ -35,11 +35,14 @@ export function updateDisplayPicture(token, formData) {
       }
       toast.success("Display Picture Updated Successfully");
       dispatch(setUser(response.data.data));
+      toast.dismiss(toastId);
+      return true;
     } catch (error) {
       console.log("UPDATE_DISPLAY_PICTURE_API API ERROR............", error);
       toast.error("Could Not Update Display Picture");
     }
     toast.dismiss(toastId);
+    return false;
   };
 }
 
@@ -62,11 +65,14 @@ export function updateProfile(token, formData) {
         setUser({ ...response.data.updatedUserDetails, image: userImage })
       );
       toast.success("Profile Updated Successfully");
+      toast.dismiss(toastId);
+      return true;
     } catch (error) {
       console.log("UPDATE_PROFILE_API API ERROR............", error);
       toast.error("Could Not Update Profile");
     }
     toast.dismiss(toastId);
+    return false;
   };
 }
 
@@ -82,11 +88,14 @@ export async function changePassword(token, formData) {
       throw new Error(response.data.message);
     }
     toast.success("Password Changed Successfully");
+    toast.dismiss(toastId);
+    return true;
   } catch (error) {
     console.log("CHANGE_PASSWORD_API API ERROR............", error);
-    toast.error(error.response.data.message);
+    toast.error(error?.response?.data?.message || "Could not change password");
   }
   toast.dismiss(toastId);
+  return false;
 }
 
 export function deleteProfile(token, navigate) {

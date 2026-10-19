@@ -1,111 +1,103 @@
-import React, { useState } from "react";
-import { useForm } from "react-hook-form";
-import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
-import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import IconBtn from "../../../common/IconBtn";
-import { changePassword } from "../../../../services/operations/settingsAPI";
+import { useEffect, useState } from "react"
+import { useForm } from "react-hook-form"
+import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai"
+import { useSelector } from "react-redux"
+
+import { changePassword } from "../../../../services/operations/settingsAPI"
+import { Field, FormCard, inputClass, primaryButtonClass } from "../../../common/formUi"
+
+const MIN_LENGTH = 8
+
+function PasswordField({ id, label, error, hint, autoComplete, registration }) {
+  const [visible, setVisible] = useState(false)
+  return (
+    <Field label={label} htmlFor={id} required hint={hint} error={error}>
+      <div className="relative">
+        <input
+          id={id}
+          type={visible ? "text" : "password"}
+          autoComplete={autoComplete}
+          className={`${inputClass(error)} pr-11`}
+          {...registration}
+        />
+        <button
+          type="button"
+          onClick={() => setVisible((value) => !value)}
+          aria-label={visible ? "Hide password" : "Show password"}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-content-subtle transition hover:text-content"
+        >
+          {visible ? <AiOutlineEyeInvisible fontSize={20} /> : <AiOutlineEye fontSize={20} />}
+        </button>
+      </div>
+    </Field>
+  )
+}
 
 const UpdatePassword = () => {
-  const [showOldPassword, setShowOldPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const { token } = useSelector((state) => state.auth);
-  const navigate = useNavigate();
-
+  const { token } = useSelector((state) => state.auth)
+  const [changedAt, setChangedAt] = useState(0)
   const {
     register,
     handleSubmit,
-    formState: { errors },
-  } = useForm();
+    reset,
+    getValues,
+    formState: { errors, isSubmitting },
+  } = useForm()
 
-  const submitPasswordForm = async (data) => {
-    try {
-      await changePassword(token, data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  const onSubmit = async ({ oldPassword, newPassword }) => {
+    const changed = await changePassword(token, { oldPassword, newPassword })
+    if (changed) setChangedAt(Date.now())
+  }
+
+  // Clear the fields after a successful change. Resetting after the submit has finished
+  // (rather than inside it) avoids re-validating the now-empty fields.
+  useEffect(() => {
+    if (changedAt) reset({ oldPassword: "", newPassword: "", confirmPassword: "" })
+  }, [changedAt, reset])
 
   return (
-    <div>
-      <form onSubmit={handleSubmit(submitPasswordForm)}>
-        <div className="my-10 flex flex-col gap-y-6 rounded-md border-[1px] border-richblack-700 bg-richblack-800 p-8 px-12">
-          <h2 className="text-lg font-semibold text-richblack-5">Password</h2>
-          <div className="flex flex-col gap-5 lg:flex-row">
-            <div className="relative flex flex-col gap-2 lg:w-[48%]">
-              <label htmlFor="oldPassword" className="lable-style">
-                Current Password
-              </label>
-              <input
-                type={showOldPassword ? "text" : "password"}
-                name="oldPassword"
-                id="oldPassword"
-                placeholder="Enter Current Password"
-                className="form-style"
-                {...register("oldPassword", { required: true })}
-              />
-
-              <span
-                onClick={() => setShowOldPassword((prev) => !prev)}
-                className="absolute right-3 top-[41px] z-[10] cursor-pointer"
-              >
-                {showOldPassword ? (
-                  <AiOutlineEyeInvisible fontSize={24} fill="#AFB2BF" />
-                ) : (
-                  <AiOutlineEye fontSize={24} fill="#AFB2BF" />
-                )}
-              </span>
-              {errors.oldPassword && (
-                <span className="-mt-1 text-[12px] text-accent">
-                  Please enter your Current Password.
-                </span>
-              )}
-            </div>
-
-            <div className="relative flex flex-col gap-2 lg:w-[48%]">
-              <label htmlFor="newPassword" className="lable-style">
-                New Password
-              </label>
-              <input
-                type={showNewPassword ? "text" : "password"}
-                name="newPassword"
-                id="newPassword"
-                placeholder="Enter New Password"
-                className="form-style"
-                {...register("newPassword", { required: true })}
-              />
-              <span
-                onClick={() => setShowNewPassword((prev) => !prev)}
-                className="absolute right-3 top-[41px] z-[10] cursor-pointer"
-              >
-                {showNewPassword ? (
-                  <AiOutlineEyeInvisible fontSize={24} fill="#AFB2BF" />
-                ) : (
-                  <AiOutlineEye fontSize={24} fill="#AFB2BF" />
-                )}
-              </span>
-              {errors.newPassword && (
-                <span className="-mt-1 text-[12px] text-accent">
-                  Please enter your New Password.
-                </span>
-              )}
-            </div>
-          </div>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate>
+      <FormCard id="password" title="Password" description="Use a strong password you don't use anywhere else.">
+        <PasswordField
+          id="oldPassword"
+          label="Current password"
+          autoComplete="current-password"
+          error={errors.oldPassword && "Please enter your current password"}
+          registration={register("oldPassword", { required: true })}
+        />
+        <div className="grid gap-5 sm:grid-cols-2">
+          <PasswordField
+            id="newPassword"
+            label="New password"
+            autoComplete="new-password"
+            hint={`At least ${MIN_LENGTH} characters.`}
+            error={errors.newPassword?.message}
+            registration={register("newPassword", {
+              required: "Please enter a new password",
+              minLength: { value: MIN_LENGTH, message: `Use at least ${MIN_LENGTH} characters` },
+              validate: (value) => value !== getValues("oldPassword") || "New password must be different",
+            })}
+          />
+          <PasswordField
+            id="confirmPassword"
+            label="Confirm new password"
+            autoComplete="new-password"
+            error={errors.confirmPassword?.message}
+            registration={register("confirmPassword", {
+              required: "Please confirm your new password",
+              validate: (value) => value === getValues("newPassword") || "Passwords don't match",
+            })}
+          />
         </div>
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={() => {
-              navigate("/dashboard/my-profile");
-            }}
-            className="cursor-pointer rounded-md bg-richblack-700 py-2 px-5 font-semibold text-richblack-50"
-          >
-            Cancel
+
+        <div className="flex justify-end border-t border-line pt-5">
+          <button type="submit" disabled={isSubmitting} className={primaryButtonClass}>
+            {isSubmitting ? "Updating..." : "Update password"}
           </button>
-          <IconBtn type="submit" text="Update" />
         </div>
-      </form>
-    </div>
-  );
-};
+      </FormCard>
+    </form>
+  )
+}
 
-export default UpdatePassword;
+export default UpdatePassword
