@@ -15,7 +15,7 @@ const About = () => {
     <div>
       {/* Section-1 */}
       <section className="bg-richblack-700">
-        <div className="mx-auto w-11/12 max-w-maxContent flex flex-col relative justify-between gap-10 text-center text-white">
+        <div className="mx-auto w-11/12 max-w-maxContent flex flex-col relative justify-between gap-10 text-center text-richblack-5">
           <header className="mx-auto py-20 text-4xl font-semibold lg:w-[70%]">
             Driving Innovation in Online Education for a
             <HighlightText text={"Brighter Future"} />
@@ -118,7 +118,7 @@ const About = () => {
       <StatsComponent />
 
       {/* Section-5 */}
-      <section className="mx-auto mt-20 flex w-11/12 max-w-maxContent flex-col justify-between gap-10 text-white">
+      <section className="mx-auto mt-20 flex w-11/12 max-w-maxContent flex-col justify-between gap-10 text-richblack-5">
         <LearningGrid />
         <ContactFormSection />
       </section>

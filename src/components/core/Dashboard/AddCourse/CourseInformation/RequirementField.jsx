@@ -43,7 +43,7 @@ const RequirementField = ({ name, label, register, errors, setValue, getValues }
       </label>
       <div className="flex flex-col items-start space-y-2">
         <input type="text" id={name} value={requirement} onChange={(e) => setRequirement(e.target.value)} className="form-style w-full" />
-        <button type="button" onClick={handleAddRequirement} className="font-semibold text-yellow-50" > Add </button>
+        <button type="button" onClick={handleAddRequirement} className="font-semibold text-accent" > Add </button>
       </div>
 
       {requirementList.length > 0 && (

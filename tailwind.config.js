@@ -1,6 +1,10 @@
+const themeColor = (name) => `rgb(var(--color-${name}) / <alpha-value>)`;
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
+  // Dark mode is opt-in: add class="dark" to <html> (tokens live in src/index.css).
+  darkMode: "class",
   theme: {
     fontFamily: {
       inter: ["Inter", "sans-serif"],
@@ -12,18 +16,18 @@ module.exports = {
       black: "#000",
       transparent: "#ffffff00",
       richblack: {
-        5: "#F1F2FF",
-        25: "#DBDDEA",
-        50: "#C5C7D4",
-        100: "#AFB2BF",
-        200: "#999DAA",
-        300: "#838894",
-        400: "#6E727F",
-        500: "#585D69",
-        600: "#424854",
-        700: "#2C333F",
-        800: "#161D29",
-        900: "#000814",
+        5: themeColor("richblack-5"),
+        25: themeColor("richblack-25"),
+        50: themeColor("richblack-50"),
+        100: themeColor("richblack-100"),
+        200: themeColor("richblack-200"),
+        300: themeColor("richblack-300"),
+        400: themeColor("richblack-400"),
+        500: themeColor("richblack-500"),
+        600: themeColor("richblack-600"),
+        700: themeColor("richblack-700"),
+        800: themeColor("richblack-800"),
+        900: themeColor("richblack-900"),
       },
       richblue: {
         5: "#ECF5FF",
@@ -128,6 +132,27 @@ module.exports = {
       maxWidth: {
         maxContent: "1260px",
         maxContentTab: "650px"
+      },
+      // Theme-aware colors backed by the CSS variables in src/index.css.
+      colors: {
+        page: themeColor("page"),
+        surface: themeColor("surface"),
+        field: themeColor("field"),
+        line: themeColor("line"),
+        content: {
+          DEFAULT: themeColor("content"),
+          muted: themeColor("content-muted"),
+          subtle: themeColor("content-subtle"),
+        },
+        brand: {
+          DEFAULT: themeColor("brand"),
+          hover: themeColor("brand-hover"),
+        },
+        "on-brand": themeColor("on-brand"),
+        link: themeColor("link"),
+        accent: themeColor("accent"),
+        selected: themeColor("selected"),
+        danger: themeColor("danger"),
       },
     },
   },

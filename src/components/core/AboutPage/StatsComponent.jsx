@@ -10,7 +10,7 @@ const stats = [
 const StatsComponent = () => {
   return (
     <section className="bg-richblack-700">
-      <div className="w-11/12 flex flex-col gap-10 justify-between max-w-maxContent text-white mx-auto">
+      <div className="w-11/12 flex flex-col gap-10 justify-between max-w-maxContent text-richblack-5 mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 text-center">
           {stats.map((data, index) => {
             return (
@@ -18,7 +18,7 @@ const StatsComponent = () => {
                 <h1 className="text-[30px] font-bold text-richblack-5">
                   {data.count}
                 </h1>
-                <h1 className="font-semibold text-[16px] text-richblack-500">
+                <h1 className="font-semibold text-[16px] text-richblack-300">
                   {data.label}
                 </h1>
               </div>

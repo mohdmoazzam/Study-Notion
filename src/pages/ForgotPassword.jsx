@@ -47,7 +47,7 @@ export const ForgotPassword = () => {
             )}
             <button
               type="submit"
-              className="mt-6 w-full rounded-[8px] bg-yellow-50 py-[12px] px-[12px] font-medium text-richblack-900"
+              className="mt-6 w-full rounded-[8px] bg-yellow-50 py-[12px] px-[12px] font-medium text-on-brand"
             >
               {!emailSent ? "Reset Password" : "Resend Email"}
             </button>

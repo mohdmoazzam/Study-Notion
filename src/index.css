@@ -1,3 +1,101 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Theme tokens (space-separated RGB channels so Tailwind opacity modifiers work).
+ *
+ * The app is styled with the `richblack` scale (bg-richblack-900 page, bg-richblack-800 cards,
+ * text-richblack-5 primary text, ...). In light mode that scale is inverted, so the same classes
+ * produce a light UI; in dark mode it holds the original values.
+ *
+ * Light is the default. Adding class="dark" to <html> switches the whole app to dark mode.
+ * Prefer the semantic colors (bg-surface, text-content, ...) in new components.
+ */
+@layer base {
+  :root {
+    /* Neutral scale: 900 = page, 800 = cards, 700 = borders, ..., 5 = primary text */
+    --color-richblack-5: 15 18 30;
+    --color-richblack-25: 31 36 48;
+    --color-richblack-50: 52 58 70;
+    --color-richblack-100: 67 74 87;
+    --color-richblack-200: 82 90 104;
+    --color-richblack-300: 100 107 120;
+    --color-richblack-400: 124 132 147;
+    --color-richblack-500: 169 176 188;
+    --color-richblack-600: 208 213 221;
+    --color-richblack-700: 228 231 236;
+    --color-richblack-800: 255 255 255;
+    --color-richblack-900: 246 247 251;
+
+    --color-field: 255 255 255;
+    --color-accent: 138 106 0;
+    --color-selected: 255 251 230;
+    --color-danger: 220 38 38;
+
+    /* Graph-paper lines (math notebook): minor squares + darker line every 5 squares */
+    --color-grid-minor: 222 230 241;
+    --color-grid-major: 196 209 228;
+  }
+
+  .dark {
+    --color-richblack-5: 241 242 255;
+    --color-richblack-25: 219 221 234;
+    --color-richblack-50: 197 199 212;
+    --color-richblack-100: 175 178 191;
+    --color-richblack-200: 153 157 170;
+    --color-richblack-300: 131 136 148;
+    --color-richblack-400: 110 114 127;
+    --color-richblack-500: 88 93 105;
+    --color-richblack-600: 66 72 84;
+    --color-richblack-700: 44 51 63;
+    --color-richblack-800: 22 29 41;
+    --color-richblack-900: 0 8 20;
+
+    --color-field: 0 8 20;
+    --color-accent: 255 214 10;
+    --color-selected: 42 36 16;
+    --color-danger: 248 113 113;
+
+    --color-grid-minor: 18 25 37;
+    --color-grid-major: 36 43 56;
+  }
+
+  /* Semantic tokens, derived from the scale so both modes stay in sync. */
+  :root,
+  .dark {
+    --color-page: var(--color-richblack-900);
+    --color-surface: var(--color-richblack-800);
+    --color-line: var(--color-richblack-700);
+    --color-content: var(--color-richblack-5);
+    --color-content-muted: var(--color-richblack-300);
+    --color-content-subtle: var(--color-richblack-400);
+    --color-link: var(--color-accent);
+    /* Brand yellow and the dark text on it are the same in both modes. */
+    --color-brand: 255 214 10;
+    --color-brand-hover: 231 192 9;
+    --color-on-brand: 0 8 20;
+  }
+}
+
+@layer components {
+  /* Math-notebook graph paper. Use on a background layer behind content. */
+  .notebook-grid {
+    --grid-cell: 24px;
+    background-color: rgb(var(--color-page));
+    background-image:
+      linear-gradient(rgb(var(--color-grid-major)) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--color-grid-major)) 1px, transparent 1px),
+      linear-gradient(rgb(var(--color-grid-minor)) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--color-grid-minor)) 1px, transparent 1px);
+    background-size:
+      calc(var(--grid-cell) * 5) calc(var(--grid-cell) * 5),
+      calc(var(--grid-cell) * 5) calc(var(--grid-cell) * 5),
+      var(--grid-cell) var(--grid-cell),
+      var(--grid-cell) var(--grid-cell);
+    background-position: center top;
+    /* Fade the paper out towards the bottom so it blends into the next section. */
+    -webkit-mask-image: linear-gradient(to bottom, #000 65%, transparent);
+    mask-image: linear-gradient(to bottom, #000 65%, transparent);
+  }
+}

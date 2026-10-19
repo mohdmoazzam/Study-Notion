@@ -56,7 +56,7 @@ const UpdatePassword = () => {
                 )}
               </span>
               {errors.oldPassword && (
-                <span className="-mt-1 text-[12px] text-yellow-100">
+                <span className="-mt-1 text-[12px] text-accent">
                   Please enter your Current Password.
                 </span>
               )}
@@ -85,7 +85,7 @@ const UpdatePassword = () => {
                 )}
               </span>
               {errors.newPassword && (
-                <span className="-mt-1 text-[12px] text-yellow-100">
+                <span className="-mt-1 text-[12px] text-accent">
                   Please enter your New Password.
                 </span>
               )}

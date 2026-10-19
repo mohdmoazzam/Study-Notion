@@ -20,7 +20,7 @@ const RenderCartCourses = () => {
               <p className="text-lg font-medium text-richblack-5">{course?.courseName}</p>
               <p className="text-sm text-richblack-300">{course?.category?.name}</p>
               <div className="flex items-center gap-2">
-                <span className="text-yellow-5">4.8</span>
+                <span className="text-accent">4.8</span>
                 <ReactStars
                   count={5}
                   size={20}
@@ -40,7 +40,7 @@ const RenderCartCourses = () => {
               <span>Remove</span>
             </button>
 
-            <p className="mb-6 text-3xl font-medium text-yellow-100">Rs {course?.price}</p>
+            <p className="mb-6 text-3xl font-medium text-accent">Rs {course?.price}</p>
           </div>
         </div>
       ))}

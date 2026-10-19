@@ -13,7 +13,7 @@ const SidebarLink = ({ link, iconName }) => {
       to={link.path}
       className={`relative px-8 py-2 text-sm font-medium ${
         matchRoute(link.path)
-          ? "bg-yellow-100"
+          ? "bg-selected text-accent"
           : "bg-opacity-0 text-richblack-300"
       } transition-all duration-200`}
     >

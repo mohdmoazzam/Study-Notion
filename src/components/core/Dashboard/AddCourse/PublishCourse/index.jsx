@@ -73,7 +73,7 @@ const PublishCourse = () => {
         </div>
 
         <div className="ml-auto flex max-w-max items-center gap-x-4">
-          <button disabled={loading} type="button" onClick={goBack} className="flex cursor-pointer items-center gap-x-2 rounded-md bg-richblack-300 py-[8px] px-[20px] font-semibold text-richblack-900">
+          <button disabled={loading} type="button" onClick={goBack} className="flex cursor-pointer items-center gap-x-2 rounded-md bg-richblack-700 py-[8px] px-[20px] font-semibold text-on-brand">
             Back
           </button>
           <IconBtn disabled={loading} text="Save Changes" />

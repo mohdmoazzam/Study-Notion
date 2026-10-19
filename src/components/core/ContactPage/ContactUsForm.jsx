@@ -130,7 +130,7 @@ const ContactUsForm = () => {
             </div>
           </div>
           {errors.phoneNo && (
-            <span className="-mt-1 text-[12px] text-yellow-100">
+            <span className="-mt-1 text-[12px] text-accent">
               {errors.phoneNo.message}
             </span>
           )}

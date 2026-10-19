@@ -141,7 +141,7 @@ const NestedView = ({ handleChangeEditSectionName }) => {
               ))}
               <button
                 onClick={() => setAddSubSection(section._id)}
-                className="mt-3 flex items-center gap-x-1 text-yellow-50"
+                className="mt-3 flex items-center gap-x-1 text-accent"
               >
                 <AiOutlinePlus className="text-lg" />
                 <p>Add Lecture</p>

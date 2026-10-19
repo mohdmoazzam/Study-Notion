@@ -1,21 +1,70 @@
 import { useState } from "react"
-import { toast } from "react-hot-toast"
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai"
-import { useDispatch } from "react-redux"
+import { FaChalkboardTeacher, FaUserGraduate } from "react-icons/fa"
+import { FiLock, FiMail, FiUser } from "react-icons/fi"
+import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 
 import { sendOtp } from "../../../services/operations/authAPI"
 import { setSignupData } from "../../../slices/authSlice"
 import { ACCOUNT_TYPE } from "../../../utils/constants"
-import Tab from "../../common/Tab"
+
+const ROLE_OPTIONS = [
+  { type: ACCOUNT_TYPE.STUDENT, label: "Student", description: "I want to learn", Icon: FaUserGraduate },
+  { type: ACCOUNT_TYPE.INSTRUCTOR, label: "Instructor", description: "I want to teach", Icon: FaChalkboardTeacher },
+]
+
+const inputBaseClass =
+  "w-full rounded-lg border bg-field py-2.5 pl-10 text-content outline-none transition placeholder:text-content-subtle focus:ring-2"
+
+const inputStateClass = (invalid) =>
+  invalid
+    ? "border-danger focus:border-danger focus:ring-danger/20"
+    : "border-line focus:border-brand focus:ring-brand/30"
+
+function Field({ label, Icon, error, children }) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium text-content">{label}</span>
+      <div className="relative">
+        <Icon className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-content-subtle" />
+        {children}
+      </div>
+      {error && <span className="text-xs text-danger">{error}</span>}
+    </label>
+  )
+}
+
+function PasswordInput({ invalid, ...inputProps }) {
+  const [visible, setVisible] = useState(false)
+
+  return (
+    <>
+      <input
+        required
+        type={visible ? "text" : "password"}
+        aria-invalid={invalid}
+        className={`${inputBaseClass} ${inputStateClass(invalid)} pr-11`}
+        {...inputProps}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((prev) => !prev)}
+        aria-label={visible ? "Hide password" : "Show password"}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-content-subtle transition hover:text-content"
+      >
+        {visible ? <AiOutlineEyeInvisible fontSize={20} /> : <AiOutlineEye fontSize={20} />}
+      </button>
+    </>
+  )
+}
 
 function SignupForm() {
   const navigate = useNavigate()
   const dispatch = useDispatch()
+  const { loading } = useSelector((state) => state.auth)
 
-  // student or instructor
   const [accountType, setAccountType] = useState(ACCOUNT_TYPE.STUDENT)
-
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -24,12 +73,9 @@ function SignupForm() {
     confirmPassword: "",
   })
 
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-
   const { firstName, lastName, email, password, confirmPassword } = formData
+  const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword
 
-  // Handle input fields, when some value changes
   const handleOnChange = (e) => {
     setFormData((prevData) => ({
       ...prevData,
@@ -37,170 +83,128 @@ function SignupForm() {
     }))
   }
 
-  // Handle Form Submission
   const handleOnSubmit = (e) => {
     e.preventDefault()
+    if (password !== confirmPassword) return
 
-    if (password !== confirmPassword) {
-      toast.error("Passwords Do Not Match")
-      return
-    }
-    const signupData = { ...formData, accountType };
-
-    // Setting signup data to state
-    // To be used after otp verification
-    dispatch(setSignupData(signupData))
-    // Send OTP to user for verification
-    dispatch(sendOtp(formData.email, navigate))
-
-    // Reset
-    setFormData({
-      firstName: "",
-      lastName: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    })
-    setAccountType(ACCOUNT_TYPE.STUDENT)
+    // Kept in state for the OTP verification step, which completes the signup.
+    dispatch(setSignupData({ ...formData, accountType }))
+    // On success this navigates to /verify-email; on failure the form keeps its values.
+    dispatch(sendOtp(email, navigate))
   }
 
-  // data to pass to Tab component
-  const tabData = [
-    {
-      id: 1,
-      tabName: "Student",
-      type: ACCOUNT_TYPE.STUDENT,
-    },
-    {
-      id: 2,
-      tabName: "Instructor",
-      type: ACCOUNT_TYPE.INSTRUCTOR,
-    },
-  ]
-
   return (
-    <div>
-      {/* Tab */}
-      <Tab tabData={tabData} field={accountType} setField={setAccountType} />
-      {/* Form */}
-      <form onSubmit={handleOnSubmit} className="flex w-full flex-col gap-y-4">
-        <div className="flex gap-x-4">
-          <label>
-            <p className="mb-1 text-[0.875rem] leading-[1.375rem] text-richblack-5">
-              First Name <sup className="text-pink-200">*</sup>
-            </p>
-            <input
-              required
-              type="text"
-              name="firstName"
-              value={firstName}
-              onChange={handleOnChange}
-              placeholder="Enter first name"
-              style={{
-                boxShadow: "inset 0px -1px 0px rgba(255, 255, 255, 0.18)",
-              }}
-              className="w-full rounded-[0.5rem] bg-richblack-800 p-[12px] text-richblack-5"
-            />
-          </label>
-          <label>
-            <p className="mb-1 text-[0.875rem] leading-[1.375rem] text-richblack-5">
-              Last Name <sup className="text-pink-200">*</sup>
-            </p>
-            <input
-              required
-              type="text"
-              name="lastName"
-              value={lastName}
-              onChange={handleOnChange}
-              placeholder="Enter last name"
-              style={{
-                boxShadow: "inset 0px -1px 0px rgba(255, 255, 255, 0.18)",
-              }}
-              className="w-full rounded-[0.5rem] bg-richblack-800 p-[12px] text-richblack-5"
-            />
-          </label>
-        </div>
-        <label className="w-full">
-          <p className="mb-1 text-[0.875rem] leading-[1.375rem] text-richblack-5">
-            Email Address <sup className="text-pink-200">*</sup>
-          </p>
+    <form onSubmit={handleOnSubmit} className="flex w-full flex-col gap-5">
+      <div role="radiogroup" aria-label="Account type" className="grid grid-cols-2 gap-3">
+        {ROLE_OPTIONS.map(({ type, label, description, Icon }) => {
+          const selected = accountType === type
+          return (
+            <button
+              key={type}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => setAccountType(type)}
+              className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${
+                selected
+                  ? "border-brand bg-selected ring-1 ring-brand"
+                  : "border-line bg-field hover:border-content-subtle"
+              }`}
+            >
+              <span
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition ${
+                  selected ? "bg-brand text-on-brand" : "bg-page text-content-muted"
+                }`}
+              >
+                <Icon />
+              </span>
+              <span>
+                <span className="block text-sm font-semibold text-content">{label}</span>
+                <span className="block text-xs text-content-muted">{description}</span>
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <Field label="First name" Icon={FiUser}>
           <input
             required
             type="text"
-            name="email"
-            value={email}
+            name="firstName"
+            autoComplete="given-name"
+            value={firstName}
             onChange={handleOnChange}
-            placeholder="Enter email address"
-            style={{
-              boxShadow: "inset 0px -1px 0px rgba(255, 255, 255, 0.18)",
-            }}
-            className="w-full rounded-[0.5rem] bg-richblack-800 p-[12px] text-richblack-5"
+            placeholder="John"
+            className={`${inputBaseClass} ${inputStateClass(false)} pr-3`}
           />
-        </label>
-        <div className="flex gap-x-4">
-          <label className="relative">
-            <p className="mb-1 text-[0.875rem] leading-[1.375rem] text-richblack-5">
-              Create Password <sup className="text-pink-200">*</sup>
-            </p>
-            <input
-              required
-              type={showPassword ? "text" : "password"}
-              name="password"
-              value={password}
-              onChange={handleOnChange}
-              placeholder="Enter Password"
-              style={{
-                boxShadow: "inset 0px -1px 0px rgba(255, 255, 255, 0.18)",
-              }}
-              className="w-full rounded-[0.5rem] bg-richblack-800 p-[12px] pr-10 text-richblack-5"
-            />
-            <span
-              onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-[38px] z-[10] cursor-pointer"
-            >
-              {showPassword ? (
-                <AiOutlineEyeInvisible fontSize={24} fill="#AFB2BF" />
-              ) : (
-                <AiOutlineEye fontSize={24} fill="#AFB2BF" />
-              )}
-            </span>
-          </label>
-          <label className="relative">
-            <p className="mb-1 text-[0.875rem] leading-[1.375rem] text-richblack-5">
-              Confirm Password <sup className="text-pink-200">*</sup>
-            </p>
-            <input
-              required
-              type={showConfirmPassword ? "text" : "password"}
-              name="confirmPassword"
-              value={confirmPassword}
-              onChange={handleOnChange}
-              placeholder="Confirm Password"
-              style={{
-                boxShadow: "inset 0px -1px 0px rgba(255, 255, 255, 0.18)",
-              }}
-              className="w-full rounded-[0.5rem] bg-richblack-800 p-[12px] pr-10 text-richblack-5"
-            />
-            <span
-              onClick={() => setShowConfirmPassword((prev) => !prev)}
-              className="absolute right-3 top-[38px] z-[10] cursor-pointer"
-            >
-              {showConfirmPassword ? (
-                <AiOutlineEyeInvisible fontSize={24} fill="#AFB2BF" />
-              ) : (
-                <AiOutlineEye fontSize={24} fill="#AFB2BF" />
-              )}
-            </span>
-          </label>
-        </div>
-        <button
-          type="submit"
-          className="mt-6 rounded-[8px] bg-yellow-50 py-[8px] px-[12px] font-medium text-richblack-900"
+        </Field>
+        <Field label="Last name" Icon={FiUser}>
+          <input
+            required
+            type="text"
+            name="lastName"
+            autoComplete="family-name"
+            value={lastName}
+            onChange={handleOnChange}
+            placeholder="Doe"
+            className={`${inputBaseClass} ${inputStateClass(false)} pr-3`}
+          />
+        </Field>
+      </div>
+
+      <Field label="Email address" Icon={FiMail}>
+        <input
+          required
+          type="email"
+          name="email"
+          autoComplete="email"
+          value={email}
+          onChange={handleOnChange}
+          placeholder="you@example.com"
+          className={`${inputBaseClass} ${inputStateClass(false)} pr-3`}
+        />
+      </Field>
+
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <Field label="Password" Icon={FiLock}>
+          <PasswordInput
+            name="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={handleOnChange}
+            placeholder="Create password"
+          />
+        </Field>
+        <Field
+          label="Confirm password"
+          Icon={FiLock}
+          error={passwordsMismatch ? "Passwords don't match" : undefined}
         >
-          Create Account
-        </button>
-      </form>
-    </div>
+          <PasswordInput
+            name="confirmPassword"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={handleOnChange}
+            placeholder="Repeat password"
+            invalid={passwordsMismatch}
+          />
+        </Field>
+      </div>
+
+      <button
+        type="submit"
+        disabled={loading || passwordsMismatch}
+        className="mt-2 w-full rounded-lg bg-brand py-3 font-semibold text-on-brand transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {loading ? "Sending verification code..." : `Create ${accountType} account`}
+      </button>
+
+      <p className="text-center text-xs text-content-muted">
+        We&apos;ll email you a 6-digit code to verify your account.
+      </p>
+    </form>
   )
 }
 

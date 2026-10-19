@@ -15,12 +15,12 @@ const IconBtn = ({
       onClick={onclick}
       className={`flex items-center ${
         outline ? "border border-yellow-50 bg-transparent" : "bg-yellow-50"
-      } cursor-pointer gap-x-2 rounded-md py-2 px-5 font-semibold text-richblack-900 ${customClasses}`}
+      } cursor-pointer gap-x-2 rounded-md py-2 px-5 font-semibold text-on-brand ${customClasses}`}
       type={type}
     >
       {children ? (
         <>
-          <span className={`${outline && "text-yellow-50"}`}>{text}</span>
+          <span className={`${outline && "text-accent"}`}>{text}</span>
           {children}
         </>
       ) : (

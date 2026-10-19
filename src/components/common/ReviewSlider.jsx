@@ -1,63 +1,83 @@
-import React, { useEffect, useState } from "react"
-import ReactStars from "react-rating-stars-component"
- 
-import { Swiper, SwiperSlide } from "swiper/react"                // Import Swiper React components
-import "swiper/css"                                              // Import Swiper styles
-import "swiper/css/free-mode"
-import "swiper/css/pagination"
-import "../../App.css"
-import { FaStar } from "react-icons/fa"                         // Icons
+import { useEffect, useState } from "react"
+import { FaStar } from "react-icons/fa"
+import { Autoplay } from "swiper"
+import { Swiper, SwiperSlide } from "swiper/react"
+import "swiper/css"
 
-import { apiConnector } from "../../services/apiconnector"          // Get apiFunction and the endpoint
+import { apiConnector } from "../../services/apiconnector"
 import { ratingsEndpoints } from "../../services/apis"
 
-export const ReviewSlider = () => {
-    const [reviews, setReviews] = useState([]);
-    const truncateWords = 15;
+const clampClass = "overflow-hidden [-webkit-box-orient:vertical] [display:-webkit-box]"
 
-    useEffect(() => {
-        ; (async () => {
-            const { data } = await apiConnector("GET", ratingsEndpoints.REVIEWS_DETAILS_API);
-            if (data?.success) {
-                setReviews(data?.data);
-            }
-        })()
-    }, []);
+function Stars({ rating }) {
+  return (
+    <div className="flex gap-1" aria-label={`Rated ${rating} out of 5`}>
+      {[1, 2, 3, 4, 5].map((value) => (
+        <FaStar key={value} className={value <= Math.round(rating) ? "text-brand" : "text-line"} />
+      ))}
+    </div>
+  )
+}
 
-    return (
-        <div className='text-white'>
-            <div className="my-[50px] h-[184px] max-w-maxContentTab lg:max-w-maxContent">
-            <Swiper className="w-full " slidesPerView={3} spaceBetween={25} loop={true} freeMode={true} autoplay={{delay: 2500,  disableOnInteraction: false, }} >
-                    {
-                        reviews?.map((review, index) => (
-                            <SwiperSlide key={index}>
-                                <img
-                                    src={review?.user?.image ? review?.user?.image : `https://api.dicebear.com/5.x/initials/svg?seed=${review?.user?.firstName} ${review?.user?.lastName}`}
-                                    alt='Profile pic'
-                                    className="h-9 w-9 rounded-full object-cover"
-                                />
-                                <p>{review?.user?.firstName} {review?.user?.lastName}</p>
-                                <p>{review?.course?.courseName}</p>
-                                <p>
-                                    {review?.review}
-                                </p>
+// Renders nothing until there are reviews, so pages don't show an empty section.
+export const ReviewSlider = ({ title }) => {
+  const [reviews, setReviews] = useState([])
 
-                                <p>{review?.rating.toFixed(1)}</p>
+  useEffect(() => {
+    let active = true
+    apiConnector("GET", ratingsEndpoints.REVIEWS_DETAILS_API)
+      .then(({ data }) => {
+        if (active && data?.success) setReviews(data.data)
+      })
+      .catch((error) => console.log("Could not fetch reviews.", error))
+    return () => {
+      active = false
+    }
+  }, [])
 
-                                <ReactStars
-                                    count={5}
-                                    value={review?.rating}
-                                    size={20}
-                                    edit={false}
-                                    activeColor="#ffd700"
-                                    emptyIcon={FaStar}
-                                    filledIcon={FaStar}
-                                />
-                            </SwiperSlide>
-                        ))
-                    }
-                </Swiper>
-            </div>
-        </div>
-    )
+  if (reviews.length === 0) return null
+
+  return (
+    <section className="mx-auto w-11/12 max-w-maxContent py-20">
+      {title}
+
+      <Swiper
+        modules={[Autoplay]}
+        className="mt-12"
+        spaceBetween={24}
+        loop={reviews.length > 3}
+        autoplay={{ delay: 3500, disableOnInteraction: false }}
+        breakpoints={{ 0: { slidesPerView: 1 }, 640: { slidesPerView: 2 }, 1024: { slidesPerView: 3 } }}
+      >
+        {reviews.map((review) => {
+          const { user, course } = review
+          const name = `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() || "StudyNotion learner"
+
+          return (
+            <SwiperSlide key={review._id} className="!h-auto">
+              <figure className="flex h-full flex-col rounded-2xl border border-line bg-surface p-6">
+                <Stars rating={review.rating} />
+                <blockquote className={`mt-4 flex-1 text-content [-webkit-line-clamp:4] ${clampClass}`}>
+                  &ldquo;{review.review}&rdquo;
+                </blockquote>
+                <figcaption className="mt-6 flex items-center gap-3">
+                  <img
+                    src={user?.image || `https://api.dicebear.com/5.x/initials/svg?seed=${encodeURIComponent(name)}`}
+                    alt=""
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-content">{name}</p>
+                    {course?.courseName && (
+                      <p className="truncate text-xs text-content-muted">{course.courseName}</p>
+                    )}
+                  </div>
+                </figcaption>
+              </figure>
+            </SwiperSlide>
+          )
+        })}
+      </Swiper>
+    </section>
+  )
 }

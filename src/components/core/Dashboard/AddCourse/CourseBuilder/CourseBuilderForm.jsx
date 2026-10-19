@@ -117,7 +117,7 @@ const CourseBuilderForm = () => {
             text={editSectionName ? "Edit Section" : "Create Section"}
             outline={true}
           >
-            <GrAddCircle className="text-yellow-50" />
+            <GrAddCircle className="text-accent" />
           </IconBtn>
           {editSectionName && (
             <button
@@ -136,7 +136,7 @@ const CourseBuilderForm = () => {
       <div className="flex justify-end gap-x-3">
         <button
           onClick={goBack}
-          className={`flex cursor-pointer items-center gap-x-2 rounded-md bg-richblack-300 py-[8px] px-[20px] font-semibold text-richblack-900`}
+          className={`flex cursor-pointer items-center gap-x-2 rounded-md bg-richblack-700 py-[8px] px-[20px] font-semibold text-richblack-5`}
         >
           Back
         </button>

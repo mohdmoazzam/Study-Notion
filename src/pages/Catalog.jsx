@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { toCatalogSlug } from "../utils/catalog"
+import CategoryIcon from "../components/common/CategoryIcon"
 import Footer from "../components/common/Footer";
 import { useParams } from "react-router-dom";
 import { apiConnector } from "../services/apiconnector";
@@ -16,9 +18,9 @@ const Catalog = () => {
   useEffect(() => {
     const getCategories = async () => {
       const res = await apiConnector("GET", categories.CATEGORIES_API);
-      const category_id = res?.data?.data?.filter(
-        (ct) => ct.name.split(" ").join("-").toLowerCase() === catalogName
-      )[0]._id;
+      const category_id = res?.data?.data?.find(
+        (ct) => toCatalogSlug(ct.name) === catalogName
+      )?._id;
       setCategoryId(category_id);
     };
     getCategories();
@@ -45,9 +47,16 @@ const Catalog = () => {
       <div className=" box-content bg-richblack-800 px-4">
         <div className="mx-auto flex min-h-[260px] max-w-maxContentTab flex-col justify-center gap-4 lg:max-w-maxContent ">
           <p className="text-sm text-richblack-300">
-            {`Home / Catalog / `} <span className="text-yellow-25"> {catalogPageData?.data?.selectedCategory?.name} </span>
+            {`Home / Catalog / `} <span className="text-accent"> {catalogPageData?.data?.selectedCategory?.name} </span>
           </p>
-          <p className="text-3xl text-richblack-5"> {catalogPageData?.data?.selectedCategory?.name} </p>
+          <p className="flex items-center gap-3 text-3xl text-richblack-5">
+            {catalogPageData?.data?.selectedCategory?.name && (
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-selected text-2xl text-accent">
+                <CategoryIcon name={catalogPageData.data.selectedCategory.name} />
+              </span>
+            )}
+            {catalogPageData?.data?.selectedCategory?.name}
+          </p>
           <p className="max-w-[870px] text-richblack-200"> {catalogPageData?.data?.selectedCategory?.description} </p>
         </div>
       </div>
@@ -57,8 +66,8 @@ const Catalog = () => {
 
         <div className="section_heading">Courses to get you started</div>
         <div className="my-4 flex border-b border-b-richblack-600 text-sm">
-          <p className = {`px-4 py-2 ${active === 1 ? "border-b border-b-yellow-25 text-yellow-25" : "text-richblack-50" } cursor-pointer`} onClick={() => setActive(1)} > Most Populer  </p>
-          <p className={`px-4 py-2 ${ active === 2 ? "border-b border-b-yellow-25 text-yellow-25": "text-richblack-50" } cursor-pointer`} onClick={() => setActive(2)} > New </p>
+          <p className = {`px-4 py-2 ${active === 1 ? "border-b border-b-yellow-25 text-accent" : "text-richblack-50" } cursor-pointer`} onClick={() => setActive(1)} > Most Populer  </p>
+          <p className={`px-4 py-2 ${ active === 2 ? "border-b border-b-yellow-25 text-accent": "text-richblack-50" } cursor-pointer`} onClick={() => setActive(2)} > New </p>
         </div>
         <div>
           <CourseSlider Courses = {catalogPageData?.data?.selectedCategory?.course} />

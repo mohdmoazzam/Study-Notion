@@ -84,7 +84,7 @@ export const VideoDetailsSidebar = ({ setReviewModal }) => {
                                                 {
                                                     section.subSection?.map((topic, i) => (
                                                         <div
-                                                            className={`flex gap-5 p-5 ${videoBarActive === topic?._id ? "bg-yellow-200 text-richblack-900" : "bg-richblack-900 text-white"}`}
+                                                            className={`flex gap-5 p-5 ${videoBarActive === topic?._id ? "bg-yellow-200 text-on-brand" : "bg-richblack-900 text-richblack-5"}`}
                                                             key={i}
                                                             onClick={() => {
                                                                 navigate(`/view-course/${courseEntireData?._id}/section/${section._id}/sub-section/${topic?._id}`)

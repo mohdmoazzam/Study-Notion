@@ -21,7 +21,7 @@ const Course_Card = ({ course, Height }) => {
                         <p className="text-xl text-richblack-5">{course?.courseName}</p>
                         <p className="text-sm text-richblack-50">By {course?.instructor?.firstName} {course?.instructor?.lastName}</p>
                         <div className="flex items-center gap-2">
-                            <span className="text-yellow-5">{avgReviewCount || 0}</span>
+                            <span className="text-accent">{avgReviewCount || 0}</span>
                             <RatingStars Review_Count={avgReviewCount}/>
                             <span className="text-richblack-400">{course?.ratingAndReviews?.length} Rating</span>
                         </div>
