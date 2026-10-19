@@ -1,31 +1,169 @@
-# React & Tailwind CSS Starter Pack
+# StudyNotion
 
-This is a starter pack for creating React projects with Tailwind CSS configured. It uses React version **18.2** and Tailwind CSS version **3.2**.
+StudyNotion is a full-stack ed-tech platform where instructors publish video courses and students discover, buy, and learn from them. It is built with a React + Redux frontend and a TypeScript, Express, and MongoDB backend.
 
-## Usage
+## Features
 
-This starter pack includes a basic setup for using **Tailwind CSS with React**. To start building your own components and styles, follow these steps:
+### For students
+- **Browse the catalog**: explore courses by category, see top-selling courses, and read ratings and reviews.
+- **Course pages**: view the curriculum, total duration, instructor details, and average rating before buying.
+- **Cart and checkout**: add courses to a cart and pay securely with **Razorpay**.
+- **Learn**: watch lectures in a built-in video player with a section-by-section sidebar.
+- **Track progress**: mark lectures as complete and see per-course progress on the dashboard.
+- **Rate and review**: leave a star rating and review for courses you are enrolled in.
 
-1. Clone the repository to your local machine.
-    ```sh
-    git clone https://github.com/thepranaygupta/react-tailwind-css-starter-pack.git
-    ```
+### For instructors
+- **Course builder**: create a course in steps (details and thumbnail, then sections and video lectures, then publish).
+- **Manage courses**: edit, publish or unpublish (draft), and delete your courses.
+- **Instructor dashboard**: charts of students enrolled and revenue per course.
 
-1. Install the required packages.
-    ```sh
-    cd react-tailwind-css-starter-pack
-    npm install
-    ```
+### Accounts and platform
+- **Sign up with email OTP verification**, then log in with JWT-based authentication.
+- **Password reset** by email link, and password change from settings.
+- **Profile management**: update personal details and upload a profile picture.
+- **Role-based access** for Student, Instructor, and Admin. Admins create course categories.
+- **Transactional emails** for OTP, enrollment, payment receipts, password updates, and the contact form.
+- **Media storage** on Cloudinary for thumbnails, avatars, and lecture videos.
 
-1. Start the development server.
-    ```sh
-    npm start
-    ```
-1. Open the project in your browser at [`http://localhost:3000`](http://localhost:3000) to view your project.
-1. Create your React components and add your styles using Tailwind classes. You can also create new CSS files and import them into your components.
+## Tech stack
 
-The project is set up to use `postcss-cli` to process your CSS files. You can add your own `tailwind.config.js` file to customize your Tailwind setup.
+| Layer | Technologies |
+|---|---|
+| Frontend | React 18, Redux Toolkit, React Router 6, Tailwind CSS, React Hook Form, Chart.js, Swiper, video-react |
+| Backend | Node.js, Express 4, TypeScript |
+| Database | MongoDB with Mongoose |
+| Auth | JWT, bcrypt, email OTP |
+| Services | Razorpay (payments), Cloudinary (media), Nodemailer (email) |
 
-## Contributing
+## Project structure
 
-Contributions are welcome! If you have any suggestions or find any issues, please feel free to open an issue or a pull request.
+```
+StudyNotion/
+├── src/                  # React frontend
+│   ├── pages/            # Route-level pages (Home, Catalog, Dashboard, ViewCourse, ...)
+│   ├── components/       # UI components grouped by feature
+│   ├── services/         # API endpoints and API call functions
+│   └── slices/           # Redux state (auth, profile, cart, course, viewCourse)
+└── server/               # Express + TypeScript backend
+    └── src/
+        ├── config/       # Environment configuration
+        ├── lib/          # Database, Cloudinary, Razorpay, and mailer clients
+        ├── emails/       # HTML email templates
+        ├── shared/       # Errors, middleware (auth, errors, uploads), helpers
+        └── modules/      # One folder per feature: auth, users, courses,
+                          # categories, reviews, progress, payments, contact
+```
+
+Each backend module contains its own `model`, `service` (business logic), `controller` (HTTP handling), and `routes` files.
+
+## Getting started
+
+### Prerequisites
+- Node.js 18 or later
+- A MongoDB database (for example, a free MongoDB Atlas cluster)
+- Accounts for [Cloudinary](https://cloudinary.com), [Razorpay](https://razorpay.com) (test mode works), and an SMTP email provider (for example, a Gmail app password)
+
+### 1. Clone and install
+
+```sh
+git clone https://github.com/mohdmoazzam/Study-Notion.git
+cd Study-Notion
+npm install
+cd server && npm install && cd ..
+```
+
+### 2. Configure environment variables
+
+Create `.env` in the project root (frontend):
+
+```env
+REACT_APP_BASE_URL=http://localhost:4000/api/v1
+RAZORPAY_KEY=your_razorpay_key_id
+```
+
+Create `server/.env` (backend):
+
+```env
+PORT=4000
+MONGODB_URL=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/studyNotion-db
+JWT_SECRET=a_long_random_secret
+
+MAIL_HOST=smtp.gmail.com
+MAIL_USER=you@example.com
+MAIL_PASS=your_app_password
+
+CLOUD_NAME=your_cloudinary_cloud_name
+API_KEY=your_cloudinary_api_key
+API_SECRET=your_cloudinary_api_secret
+FOLDER_NAME=StudyNotion
+
+RAZORPAY_KEY=your_razorpay_key_id
+RAZORPAY_SECRET=your_razorpay_key_secret
+```
+
+Optional backend settings:
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `CLIENT_URL` | Comma-separated frontend URLs allowed by CORS; the first is also used in password-reset links | Any origin allowed; links use `http://localhost:3000` |
+| `CONTACT_INBOX` | Address that receives contact-form messages | Project owner's address |
+| `NODE_ENV` | Set to `production` for secure, cross-site auth cookies | `development` |
+| `DNS_SERVERS` | DNS servers for the backend to use, e.g. `8.8.8.8,1.1.1.1`, if your network can't resolve `mongodb+srv://` addresses | System DNS |
+
+### 3. Run in development
+
+From the project root, start the frontend and backend together:
+
+```sh
+npm run dev
+```
+
+- Frontend: http://localhost:3000
+- Backend: http://localhost:4000
+
+### 4. Create an admin (optional)
+
+Sign-up only creates Student and Instructor accounts. To create categories, sign up normally, then set that user's `accountType` to `"Admin"` in the `users` collection of your database.
+
+## Scripts
+
+| Location | Command | Description |
+|---|---|---|
+| root | `npm run dev` | Run frontend and backend together |
+| root | `npm start` | Run the frontend only |
+| root | `npm run build` | Production build of the frontend |
+| `server/` | `npm run dev` | Run the backend with live reload |
+| `server/` | `npm run build` | Compile the backend to `server/dist` |
+| `server/` | `npm start` | Run the compiled backend |
+| `server/` | `npm run typecheck` | Type-check the backend |
+
+## API overview
+
+All endpoints are served under `/api/v1`.
+
+| Base path | Purpose |
+|---|---|
+| `/auth` | Sign-up, OTP, login, password change and reset |
+| `/profile` | User details, profile picture, enrolled courses, instructor dashboard, account deletion |
+| `/course` | Courses, sections, lectures, categories, ratings and reviews, lecture progress |
+| `/payment` | Create a Razorpay order, verify the payment and enroll, send a payment receipt |
+| `/reach` | Contact form |
+
+Protected endpoints expect an `Authorization: Bearer <token>` header.
+
+## Deployment
+
+**Backend** (for example on Render or Railway):
+- Root directory: `server`
+- Build command: `npm install && npm run build`
+- Start command: `npm start`
+- Set the environment variables listed above, plus `NODE_ENV=production`.
+
+**Frontend** (for example on Vercel or Netlify):
+- Build command: `npm run build`
+- Output directory: `build`
+- Set `REACT_APP_BASE_URL` to your deployed backend URL followed by `/api/v1`.
+
+## Author
+
+**Mohd Moazzam**: [GitHub](https://github.com/mohdmoazzam)
