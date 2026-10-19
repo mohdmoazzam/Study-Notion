@@ -1,170 +1,150 @@
-import React, { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import CountryCode from "../../../data/countrycode.json";
-import toast from "react-hot-toast";
-import { apiConnector } from "../../../services/apiconnector";
-import { contactusEndpoint } from "../../../services/apis";
+import { useForm } from "react-hook-form"
+import toast from "react-hot-toast"
+import { FiSend } from "react-icons/fi"
 
-const ContactUsForm = () => {
+import CountryCode from "../../../data/countrycode.json"
+import { apiConnector } from "../../../services/apiconnector"
+import { contactusEndpoint } from "../../../services/apis"
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitSuccessful } } = useForm();
+const EMPTY_FORM = {
+  firstname: "",
+  lastname: "",
+  email: "",
+  countrycode: "+91",
+  phoneNo: "",
+  message: "",
+}
+
+const inputClass = (invalid) =>
+  `w-full rounded-lg border bg-field px-3.5 py-2.5 text-content outline-none transition placeholder:text-content-subtle focus:ring-2 ${
+    invalid
+      ? "border-danger focus:border-danger focus:ring-danger/20"
+      : "border-line focus:border-brand focus:ring-brand/30"
+  }`
+
+function Field({ label, htmlFor, optional, error, children }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={htmlFor} className="text-sm font-medium text-content">
+        {label}
+        {optional && <span className="ml-1 font-normal text-content-subtle">(optional)</span>}
+      </label>
+      {children}
+      {error && <span className="text-xs text-danger">{error}</span>}
+    </div>
+  )
+}
+
+function ContactUsForm() {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm({ defaultValues: EMPTY_FORM })
 
   const submitContactForm = async (data) => {
-    const toastId = toast.loading("Loading...")
+    const toastId = toast.loading("Sending your message...")
     try {
-      setLoading(true);
-      await apiConnector("POST", contactusEndpoint.CONTACT_US_API, data);
+      await apiConnector("POST", contactusEndpoint.CONTACT_US_API, data)
+      toast.success("Message sent successfully", { id: toastId })
+      reset(EMPTY_FORM)
     } catch (error) {
-      console.error(error.message);
-      toast.dismiss(toastId)
+      // Keep what the user typed so they can retry.
+      toast.error(error?.response?.data?.message || "Could not send your message. Please try again.", {
+        id: toastId,
+      })
     }
-    toast.dismiss(toastId);
-    toast.success("Message sent successfully");
-  };
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (isSubmitSuccessful) {
-      reset({
-        email: "",
-        firstname: "",
-        lastname: "",
-        message: "",
-        phoneNo: "",
-      });
-    }
-  }, [reset, isSubmitSuccessful]);
+  }
 
   return (
-    <form onSubmit={handleSubmit(submitContactForm)}>
-      <div className="flex flex-col gap-14">
-        <div className="flex gap-5 ">
-          {/* FirstName */}
-          <div className="flex flex-col gap-2 lg:w-[48%]">
-            <label htmlFor="firstname" className="lable-style">
-              First Name
-            </label>
-            <input
-              type="text"
-              name="firstname"
-              id="firstname"
-              className="form-style"
-              placeholder="Enter your first name"
-              {...register("firstname", { required: true })}
-            />
-            {errors.firstname && <span>Please enter your name</span>}
-          </div>
-
-          {/* LastName */}
-          <div className="flex flex-col gap-2 lg:w-[48%]">
-            <label htmlFor="lastname" className="lable-style">
-              Last Name
-            </label>
-            <input
-              type="text"
-              name="lastname"
-              id="lastname"
-              className="form-style"
-              placeholder="Enter your last name"
-              {...register("lastname")}
-            />
-          </div>
-        </div>
-        {/* Email */}
-        <div className="flex flex-col gap-2">
-          <label htmlFor="email" className="lable-style">
-            Email Address
-          </label>
+    <form onSubmit={handleSubmit(submitContactForm)} noValidate className="flex flex-col gap-5">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <Field label="First name" htmlFor="firstname" error={errors.firstname?.message}>
           <input
-            type="email"
-            name="email"
-            id="email"
-            className="form-style"
-            placeholder="Enter email Address"
-            {...register("email", { required: true })}
+            id="firstname"
+            type="text"
+            autoComplete="given-name"
+            placeholder="John"
+            aria-invalid={Boolean(errors.firstname)}
+            className={inputClass(errors.firstname)}
+            {...register("firstname", { required: "Please enter your first name" })}
           />
-          {errors.email && <span>Please enter your email address</span>}
-        </div>
-
-        {/* PhoneNo */}
-        <div className="flex flex-col gap-2">
-          <label htmlFor="phonenumber" className="lable-style">
-            Phone Number
-          </label>
-
-          <div className="flex gap-5 justify-center items-center">
-            <div className="flex w-[81px] flex-col gap-2">
-              <select
-                type="text"
-                name="firstname"
-                id="firstname"
-                placeholder="Enter first name"
-                className="form-style"
-                {...register("countrycode", { required: true })}
-              >
-                {CountryCode.map((ele, i) => {
-                  return (
-                    <option key={i} value={ele.code}>
-                      {ele.code} -{ele.country}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-            <div className="flex w-[calc(100%-90px)] flex-col gap-2">
-              <input
-                type="number"
-                name="phonenumber"
-                id="phonenumber"
-                placeholder="12345 67890"
-                className="form-style"
-                {...register("phoneNo", {
-                  required: {
-                    value: true,
-                    message: "Please enter your Phone Number.",
-                  },
-                  maxLength: { value: 12, message: "Invalid Phone Number" },
-                  minLength: { value: 10, message: "Invalid Phone Number" },
-                })}
-              />
-            </div>
-          </div>
-          {errors.phoneNo && (
-            <span className="-mt-1 text-[12px] text-accent">
-              {errors.phoneNo.message}
-            </span>
-          )}
-        </div>
-
-        {/* Message */}
-        <div className="flex flex-col gap-2">
-          <label htmlFor="message" className="lable-style">
-            Message
-          </label>
-          <textarea
-            name="message"
-            id="message"
-            rows="7"
-            cols="30"
-            className="form-style"
-            placeholder="Enter your message here"
-            {...register("message", { required: true })}
+        </Field>
+        <Field label="Last name" htmlFor="lastname" optional>
+          <input
+            id="lastname"
+            type="text"
+            autoComplete="family-name"
+            placeholder="Doe"
+            className={inputClass(false)}
+            {...register("lastname")}
           />
-          {errors.message && <span>Please enter your message</span>}
-        </div>
-        <button
-          disabled={loading}
-          type="submit"
-          className={`rounded-md bg-yellow-50 px-6 py-3 text-center text-[13px] font-bold text-black shadow-[2px_2px_0px_0px_rgba(255,255,255,0.18)] 
-         ${!loading &&
-            "transition-all duration-200 hover:scale-95 hover:shadow-none"
-            }  disabled:bg-richblack-500 sm:text-[16px] `}
-        >
-          Send Message
-        </button>
+        </Field>
       </div>
-    </form>
-  );
-};
 
-export default ContactUsForm;
+      <Field label="Email address" htmlFor="email" error={errors.email?.message}>
+        <input
+          id="email"
+          type="email"
+          autoComplete="email"
+          placeholder="you@example.com"
+          aria-invalid={Boolean(errors.email)}
+          className={inputClass(errors.email)}
+          {...register("email", {
+            required: "Please enter your email address",
+            pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Please enter a valid email address" },
+          })}
+        />
+      </Field>
+
+      <Field label="Phone number" htmlFor="phoneNo" optional error={errors.phoneNo?.message}>
+        <div className="flex gap-3">
+          {/* Fixed-width wrapper: the shared input style is w-full. */}
+          <div className="w-28 shrink-0">
+            <select aria-label="Country code" className={`${inputClass(false)} h-full px-2`} {...register("countrycode")}>
+              {CountryCode.map(({ code, country }) => (
+                <option key={`${code}-${country}`} value={code}>
+                  {code} {country}
+                </option>
+              ))}
+            </select>
+          </div>
+          <input
+            id="phoneNo"
+            type="tel"
+            autoComplete="tel-national"
+            placeholder="12345 67890"
+            aria-invalid={Boolean(errors.phoneNo)}
+            className={`${inputClass(errors.phoneNo)} min-w-0`}
+            {...register("phoneNo", {
+              pattern: { value: /^[0-9][0-9\s-]{6,14}$/, message: "Please enter a valid phone number" },
+            })}
+          />
+        </div>
+      </Field>
+
+      <Field label="Message" htmlFor="message" error={errors.message?.message}>
+        <textarea
+          id="message"
+          rows={5}
+          placeholder="How can we help?"
+          aria-invalid={Boolean(errors.message)}
+          className={`${inputClass(errors.message)} resize-y`}
+          {...register("message", { required: "Please enter your message" })}
+        />
+      </Field>
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand py-3 font-semibold text-on-brand transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isSubmitting ? "Sending..." : "Send message"}
+        {!isSubmitting && <FiSend aria-hidden="true" />}
+      </button>
+    </form>
+  )
+}
+
+export default ContactUsForm

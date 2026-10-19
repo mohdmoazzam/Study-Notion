@@ -24,7 +24,7 @@ function Hero({ isLoggedIn }) {
 
           <h1 className="mt-6 text-4xl font-bold leading-tight tracking-tight text-content sm:text-5xl">
             Learn skills that matter.{" "}
-            <span className="bg-[linear-gradient(transparent_62%,rgb(var(--color-brand)/0.55)_62%)]">
+            <span className="highlight-marker">
               Share what you know.
             </span>
           </h1>

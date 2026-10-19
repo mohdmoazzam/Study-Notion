@@ -79,6 +79,13 @@
 }
 
 @layer components {
+  /* Yellow highlighter-pen effect for key phrases in headings. */
+  .highlight-marker {
+    background-image: linear-gradient(transparent 62%, rgb(var(--color-brand) / 0.55) 62%);
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+
   /* Math-notebook graph paper. Use on a background layer behind content. */
   .notebook-grid {
     --grid-cell: 24px;
