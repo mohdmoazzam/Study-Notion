@@ -1,14 +1,15 @@
 import type { UploadedFile } from "express-fileupload";
+import { Types } from "mongoose";
 import { uploadToCloudinary } from "../../lib/cloudinary";
 import { AppError } from "../../shared/errors";
 import type { AuthUser } from "../../shared/types/auth";
-import { convertSecondsToDuration, getTotalSeconds } from "../../shared/utils/duration";
+import { convertSecondsToDuration, countSubSections, getTotalSeconds } from "../../shared/utils/duration";
 import { Category } from "../categories/category.model";
 import { CourseProgress } from "../progress/courseProgress.model";
 import { RatingAndReview } from "../reviews/review.model";
 import { User } from "../users/user.model";
 import { Course, type CourseStatus } from "./course.model";
-import { findPopulatedCourse, INSTRUCTOR_PUBLIC_FIELDS } from "./course.queries";
+import { courseContentPopulate, findPopulatedCourse, INSTRUCTOR_PUBLIC_FIELDS, type PopulatedSection } from "./course.queries";
 import { Section } from "./section.model";
 import { SubSection } from "./subSection.model";
 
@@ -21,6 +22,7 @@ export interface CourseInput {
   category: string;
   status: CourseStatus;
   instructions: string[];
+  language: string;
 }
 
 const assertCategoryExists = async (categoryId: string): Promise<void> => {
@@ -78,6 +80,43 @@ export const getAllCourses = () =>
     .populate("instructor", INSTRUCTOR_PUBLIC_FIELDS)
     .lean();
 
+export interface InstructorStats {
+  courses: number;
+  students: number;
+  rating: number;
+  reviews: number;
+}
+
+// Totals across the instructor's published courses, shown on the course page.
+const getInstructorStats = async (instructorId: Types.ObjectId): Promise<InstructorStats> => {
+  const [totals] = await Course.aggregate<{ courses: number; students: number; courseIds: Types.ObjectId[] }>([
+    { $match: { instructor: instructorId, status: "Published" } },
+    {
+      $group: {
+        _id: null,
+        courses: { $sum: 1 },
+        students: { $sum: { $size: { $ifNull: ["$studentsEnrolled", []] } } },
+        courseIds: { $push: "$_id" },
+      },
+    },
+  ]);
+  if (!totals) {
+    return { courses: 0, students: 0, rating: 0, reviews: 0 };
+  }
+
+  const [ratings] = await RatingAndReview.aggregate<{ average: number; count: number }>([
+    { $match: { course: { $in: totals.courseIds } } },
+    { $group: { _id: null, average: { $avg: "$rating" }, count: { $sum: 1 } } },
+  ]);
+
+  return {
+    courses: totals.courses,
+    students: totals.students,
+    rating: ratings ? Math.round(ratings.average * 10) / 10 : 0,
+    reviews: ratings?.count ?? 0,
+  };
+};
+
 export const getCourseDetails = async (courseId: string) => {
   // Public endpoint: never expose lecture video URLs.
   const courseDetails = await findPopulatedCourse(courseId, "-videoUrl");
@@ -85,8 +124,11 @@ export const getCourseDetails = async (courseId: string) => {
     throw AppError.notFound(`Could not find course with id: ${courseId}`);
   }
 
+  const instructorId = courseDetails.instructor?._id;
+  const instructorStats = instructorId ? await getInstructorStats(new Types.ObjectId(String(instructorId))) : null;
+
   const totalDuration = convertSecondsToDuration(getTotalSeconds(courseDetails.courseContent));
-  return { courseDetails, totalDuration };
+  return { courseDetails, totalDuration, instructorStats };
 };
 
 export const getFullCourseDetails = async (user: AuthUser, courseId: string) => {
@@ -112,8 +154,72 @@ export const getFullCourseDetails = async (user: AuthUser, courseId: string) => 
   };
 };
 
-export const getInstructorCourses = (instructorId: string) =>
-  Course.find({ instructor: instructorId }).sort({ createdAt: -1 }).lean();
+export const INSTRUCTOR_COURSE_SORTS = ["newest", "oldest", "students", "name"] as const;
+export type InstructorCourseSort = (typeof INSTRUCTOR_COURSE_SORTS)[number];
+
+export interface InstructorCourseQuery {
+  status?: CourseStatus;
+  search?: string;
+  sort: InstructorCourseSort;
+}
+
+const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// Courses without a status count as drafts.
+const statusFilter = (status: CourseStatus) => (status === "Published" ? { status } : { status: { $ne: "Published" } });
+
+// Lightweight list for the instructor's "My courses" page, filtered, searched and sorted in the database.
+// `counts` ignore the status filter (but respect the search) so the status tabs always show their totals.
+export const getInstructorCourses = async (instructorId: string, { status, search, sort }: InstructorCourseQuery) => {
+  const instructor = new Types.ObjectId(instructorId);
+  const base = search ? { instructor, courseName: { $regex: escapeRegex(search), $options: "i" } } : { instructor };
+  const filter = status ? { ...base, ...statusFilter(status) } : base;
+  const fields = "courseName courseDescription thumbnail price status language createdAt category courseContent";
+
+  // Sorting by student count needs the array size, so that one goes through an aggregation for the order.
+  const orderedIds =
+    sort === "students"
+      ? (
+          await Course.aggregate<{ _id: Types.ObjectId }>([
+            { $match: filter },
+            { $project: { students: { $size: { $ifNull: ["$studentsEnrolled", []] } } } },
+            { $sort: { students: -1, _id: -1 } },
+          ])
+        ).map((doc) => doc._id)
+      : null;
+
+  const query = Course.find(orderedIds ? { _id: { $in: orderedIds } } : filter, `${fields} studentsEnrolled`);
+  if (sort === "name") query.sort({ courseName: 1, _id: -1 }).collation({ locale: "en", strength: 2 });
+  else if (sort === "oldest") query.sort({ _id: 1 });
+  else if (sort === "newest") query.sort({ _id: -1 });
+
+  const [docs, all, published] = await Promise.all([
+    query
+      .populate<{ category: { name: string } | null }>("category", "name")
+      .populate<{ courseContent: PopulatedSection[] }>(courseContentPopulate("timeDuration"))
+      .lean(),
+    Course.countDocuments(base),
+    Course.countDocuments({ ...base, status: "Published" }),
+  ]);
+
+  if (orderedIds) {
+    const position = new Map(orderedIds.map((id, index) => [String(id), index]));
+    docs.sort((a, b) => position.get(String(a._id))! - position.get(String(b._id))!);
+  }
+
+  const courses = docs.map(({ studentsEnrolled, courseContent, category, ...course }) => ({
+    ...course,
+    status: course.status ?? "Draft",
+    price: course.price ?? 0,
+    category: category?.name ?? null,
+    totalStudentsEnrolled: studentsEnrolled.length,
+    sectionCount: courseContent.length,
+    lectureCount: countSubSections(courseContent),
+    totalDuration: convertSecondsToDuration(getTotalSeconds(courseContent)),
+  }));
+
+  return { courses, counts: { all, Published: published, Draft: all - published } };
+};
 
 export const deleteCourse = async (instructorId: string, courseId: string): Promise<void> => {
   const course = await Course.findOne({ _id: courseId, instructor: instructorId }).lean();

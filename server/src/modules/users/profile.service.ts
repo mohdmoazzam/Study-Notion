@@ -99,20 +99,36 @@ export const getEnrolledCourses = async (userId: string) => {
   });
 };
 
+// Everything the instructor dashboard needs in one request: per-course stats, status and ratings.
 export const getInstructorDashboard = async (instructorId: string) => {
   const courses = await Course.find(
     { instructor: instructorId },
-    "courseName courseDescription price studentsEnrolled"
-  ).lean();
+    "courseName courseDescription price studentsEnrolled status thumbnail createdAt"
+  )
+    .sort({ _id: -1 })
+    .lean();
+
+  const ratings = await RatingAndReview.aggregate<{ _id: unknown; average: number; count: number }>([
+    { $match: { course: { $in: courses.map((course) => course._id) } } },
+    { $group: { _id: "$course", average: { $avg: "$rating" }, count: { $sum: 1 } } },
+  ]);
+  const ratingByCourse = new Map(ratings.map((rating) => [String(rating._id), rating]));
 
   return courses.map((course) => {
     const totalStudentsEnrolled = course.studentsEnrolled.length;
+    const rating = ratingByCourse.get(String(course._id));
     return {
       _id: course._id,
       courseName: course.courseName,
       courseDescription: course.courseDescription,
+      thumbnail: course.thumbnail,
+      status: course.status ?? "Draft",
+      price: course.price ?? 0,
+      createdAt: course.createdAt,
       totalStudentsEnrolled,
       totalAmountGenerated: totalStudentsEnrolled * (course.price ?? 0),
+      rating: rating ? Math.round(rating.average * 10) / 10 : 0,
+      reviews: rating?.count ?? 0,
     };
   });
 };

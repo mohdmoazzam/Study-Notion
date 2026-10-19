@@ -18,6 +18,17 @@ const REQUIRED_FIELDS = [...TEXT_FIELDS, "price", "tag"];
 const toStatus = (value: unknown): CourseStatus =>
   COURSE_STATUSES.includes(value as CourseStatus) ? (value as CourseStatus) : "Draft";
 
+const MAX_LANGUAGE_LENGTH = 30;
+
+// "  hindi " -> "Hindi"
+const parseLanguage = (value: unknown): string => {
+  const language = String(value).trim().replace(/\s+/g, " ");
+  if (language.length < 2 || language.length > MAX_LANGUAGE_LENGTH) {
+    throw AppError.badRequest("Invalid language");
+  }
+  return language.charAt(0).toUpperCase() + language.slice(1);
+};
+
 // Only whitelisted fields can be set, so clients can't overwrite e.g. `studentsEnrolled`.
 const parseCourseFields = (body: Record<string, unknown>): Partial<CourseInput> => {
   const input: Partial<CourseInput> = {};
@@ -28,6 +39,7 @@ const parseCourseFields = (body: Record<string, unknown>): Partial<CourseInput> 
   if (isPresent(body.tag)) input.tag = parseStringArray(body.tag, "tag");
   if (isPresent(body.instructions)) input.instructions = parseStringArray(body.instructions, "instructions");
   if (isPresent(body.status)) input.status = toStatus(body.status);
+  if (isPresent(body.language)) input.language = parseLanguage(body.language);
   return input;
 };
 
@@ -41,7 +53,7 @@ export const createCourse = asyncHandler(async (req, res) => {
   }
 
   // requireFields guarantees every mandatory field is present.
-  const input = { status: "Draft", instructions: [], ...parseCourseFields(req.body) } as CourseInput;
+  const input = { status: "Draft", instructions: [], language: "English", ...parseCourseFields(req.body) } as CourseInput;
   const course = await courseService.createCourse(instructorId, input, thumbnail);
   sendSuccess(res, 200, { data: course, message: "Course Created Successfully" });
 });
@@ -73,9 +85,24 @@ export const getFullCourseDetails = asyncHandler(async (req, res) => {
   sendSuccess(res, 200, { data: await courseService.getFullCourseDetails(user, req.params.courseId) });
 });
 
+// Query: ?status=Published|Draft&search=<name>&sort=newest|oldest|students|name (all optional).
 export const getInstructorCourses = asyncHandler(async (req, res) => {
   const { id } = requireUser(req);
-  sendSuccess(res, 200, { data: await courseService.getInstructorCourses(id) });
+  const { status, search, sort } = req.query;
+
+  if (status !== undefined && !COURSE_STATUSES.includes(status as CourseStatus)) {
+    throw AppError.badRequest(`status must be one of: ${COURSE_STATUSES.join(", ")}`);
+  }
+  if (sort !== undefined && !courseService.INSTRUCTOR_COURSE_SORTS.includes(sort as courseService.InstructorCourseSort)) {
+    throw AppError.badRequest(`sort must be one of: ${courseService.INSTRUCTOR_COURSE_SORTS.join(", ")}`);
+  }
+
+  const result = await courseService.getInstructorCourses(id, {
+    status: status as CourseStatus | undefined,
+    search: typeof search === "string" ? search.trim().slice(0, 100) : "",
+    sort: (sort as courseService.InstructorCourseSort | undefined) ?? "newest",
+  });
+  sendSuccess(res, 200, { data: result.courses, counts: result.counts });
 });
 
 export const deleteCourse = asyncHandler(async (req, res) => {

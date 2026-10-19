@@ -11,29 +11,28 @@ const {
   GET_INSTRUCTOR_DATA_API,
 } = profileEndpoints;
 
+// Quietly re-syncs the signed-in user with the server (run on app load) so the UI never shows a stale cached profile.
+// Logs out only when the session is rejected; network errors keep the cached user.
 export function getUserDetails(token, navigate) {
   return async (dispatch) => {
-    const toastId = toast.loading("Loading...");
     dispatch(setLoading(true));
     try {
       const response = await apiConnector("GET", GET_USER_DETAILS_API, null, {
         Authorization: `Bearer ${token}`,
       });
-      console.log("GET_USER_DETAILS API RESPONSE............", response);
-
-      if (!response.data.isSuccess) {
+      if (!response.data.success) {
         throw new Error(response.data.message);
       }
-      const userImage = response.data.data.image
-        ? response.data.data.image
-        : `https://api.dicebear.com/5.x/initials/svg?seed=${response.data.data.firstName} ${response.data.data.lastName}`;
-      dispatch(setUser({ ...response.data.data, image: userImage }));
+      const user = response.data.data;
+      const userImage = user.image || `https://api.dicebear.com/5.x/initials/svg?seed=${user.firstName} ${user.lastName}`;
+      dispatch(setUser({ ...user, image: userImage }));
     } catch (error) {
-      dispatch(logout(navigate));
       console.log("GET_USER_DETAILS API ERROR............", error);
-      toast.error("Could Not Get User Details");
+      if ([401, 404].includes(error?.response?.status)) {
+        toast.error("Your session has expired. Please log in again.");
+        dispatch(logout(navigate));
+      }
     }
-    toast.dismiss(toastId);
     dispatch(setLoading(false));
   };
 }
@@ -60,18 +59,14 @@ export async function getUserEnrolledCourses(token) {
   return result;
 }
 
+// Per-course stats for the instructor dashboard; null when the request fails (vs [] for no courses).
 export async function getInstructorData(token) {
-  const toastId = toast.loading("Loading...");
-  let result = [];
   try {
     const response = await apiConnector("GET", GET_INSTRUCTOR_DATA_API, null, { Authorization: `Bearer ${token}` });
-
-    console.log("GET_INSTRUCTOR_API_RESPONSE", response);
-    result = response?.data?.courses;
+    return response?.data?.courses ?? [];
   } catch (error) {
     console.log("GET_INSTRUCTOR_API ERROR", error);
-    toast.error("Could not Get Instructor Data");
+    toast.error("Could not load your dashboard");
+    return null;
   }
-  toast.dismiss(toastId);
-  return result;
 }
