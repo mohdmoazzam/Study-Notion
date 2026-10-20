@@ -1,10 +1,7 @@
 import type { PayoutMethod, PayoutStatus } from "../payouts/payout.model";
 
-export const CHANNELS = ["email", "inApp"] as const;
-export type ChannelName = (typeof CHANNELS)[number];
-
-// Every notification the app sends, with the data its templates need.
-// Payloads travel through the queue as JSON, so they must be plain values (no Dates or documents).
+// Every notification the app sends, and the data its templates need.
+// The data travels through the queue as JSON, so it must be plain values (no Dates or documents).
 export interface NotificationPayloads {
   "auth.otp": { otp: string };
   "auth.passwordReset": { url: string };
@@ -45,10 +42,16 @@ export interface Recipient {
   email?: string;
 }
 
+// The two ways a notification is delivered.
+export type ChannelName = "email" | "inApp";
+
 export interface EmailContent {
   subject: string;
   html: string;
 }
+
+export const NOTIFICATION_TONES = ["success", "danger", "info"] as const;
+export type NotificationTone = (typeof NOTIFICATION_TONES)[number];
 
 export interface InAppContent {
   title: string;
@@ -59,18 +62,10 @@ export interface InAppContent {
   tone?: NotificationTone;
 }
 
-export const NOTIFICATION_TONES = ["success", "danger", "info"] as const;
-export type NotificationTone = (typeof NOTIFICATION_TONES)[number];
-
-export interface ChannelContent {
-  email: EmailContent;
-  inApp: InAppContent;
-}
-
-// One channel's delivery of one notification: the unit the queue processes and retries.
-export interface Delivery<T extends NotificationType = NotificationType> {
-  type: T;
+// One notification on one channel: what the queue stores and retries.
+export interface Delivery {
+  type: NotificationType;
   channel: ChannelName;
   recipient: Recipient;
-  data: NotificationPayloads[T];
+  data: NotificationPayloads[NotificationType];
 }
