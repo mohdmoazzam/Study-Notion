@@ -73,6 +73,10 @@ export const env = Object.freeze({
   redisUrl: process.env.REDIS_URL?.trim() ?? "",
   // OAuth client ID for "Sign in with Google"; Google sign-in is disabled while unset.
   googleClientId: process.env.GOOGLE_CLIENT_ID?.trim() ?? "",
+  // Local testing only: MASTER_PASSWORD logs in to any student or instructor account. It is ignored
+  // in production (NODE_ENV=production, as on Render) and when shorter than 12 characters.
+  masterPassword: !isProduction && (process.env.MASTER_PASSWORD ?? "").length >= 12 ? process.env.MASTER_PASSWORD! : "",
+  masterPasswordTooShort: !isProduction && !!process.env.MASTER_PASSWORD && process.env.MASTER_PASSWORD.length < 12,
   // Fixed credentials for the super admin console. Its login is disabled while either is unset.
   superAdmin: {
     email: (process.env.SUPER_ADMIN_EMAIL ?? "").trim().toLowerCase(),

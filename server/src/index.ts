@@ -16,6 +16,11 @@ const start = async (): Promise<void> => {
   const server = createApp().listen(env.port, () => {
     console.info(`App is running at ${env.port}`);
     console.info(`Email is sent via ${mailTransport}`);
+    if (env.masterPassword) {
+      console.warn("Master password login is ON (local testing only; it is ignored in production)");
+    } else if (env.masterPasswordTooShort) {
+      console.warn("MASTER_PASSWORD is ignored: it must be at least 12 characters");
+    }
     console.info(`Links in emails point to ${env.clientUrl}`);
     if (env.isProduction && env.clientUrlIsLocal) {
       console.warn("WARNING: email links point to localhost. Add the deployed frontend URL to CLIENT_URL.");

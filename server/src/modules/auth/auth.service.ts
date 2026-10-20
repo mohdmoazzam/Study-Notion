@@ -110,6 +110,14 @@ export const signUp = async (input: SignUpInput) => {
 
 export const LOGIN_ACCOUNT_TYPES = SELF_SIGNUP_ACCOUNT_TYPES;
 
+const sha256 = (value: string) => crypto.createHash("sha256").update(value).digest();
+
+// Local testing aid (see env.masterPassword): never set in production, and never for admin accounts.
+const isMasterPassword = (password: string, accountType: AccountType): boolean =>
+  Boolean(env.masterPassword) &&
+  accountType !== "Admin" &&
+  crypto.timingSafeEqual(sha256(password), sha256(env.masterPassword));
+
 export const logIn = async (
   email: string,
   password: string,
@@ -121,17 +129,23 @@ export const logIn = async (
   if (!user) {
     throw AppError.notFound("User is not registered");
   }
-  if (!user.password) {
-    throw AppError.unauthorized(
-      "This account uses Google sign-in. Continue with Google, or reset your password to set one.",
-    );
-  }
-  if (!(await bcrypt.compare(password, user.password))) {
-    throw AppError.unauthorized("Entered password is incorrect.Try again");
+  const usedMasterPassword = isMasterPassword(password, user.accountType);
+  if (!usedMasterPassword) {
+    if (!user.password) {
+      throw AppError.unauthorized(
+        "This account uses Google sign-in. Continue with Google, or reset your password to set one.",
+      );
+    }
+    if (!(await bcrypt.compare(password, user.password))) {
+      throw AppError.unauthorized("Entered password is incorrect.Try again");
+    }
   }
   // Checked after the password so the account's role isn't revealed to someone without it.
   assertAccountType(user.accountType, accountType);
 
+  if (usedMasterPassword) {
+    console.warn(`[master password] Logged in as ${user.email} (${user.accountType}) with the master password`);
+  }
   return issueSession(user);
 };
 
