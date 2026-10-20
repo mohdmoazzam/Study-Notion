@@ -3,26 +3,13 @@ import { FiArrowLeft, FiKey, FiMail } from "react-icons/fi"
 import { Link, useSearchParams } from "react-router-dom"
 
 import { inputClass, primaryButtonClass } from "../components/common/formUi"
+import Spinner from "../components/common/Spinner"
 import { requestPasswordReset } from "../services/operations/authAPI"
 
 const RESEND_COOLDOWN_SECONDS = 30
 // Matches RESET_TOKEN_TTL_MS on the server.
 const LINK_VALID_MINUTES = 5
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-// Shown in a button while the request is in flight; the label stays for screen readers.
-function Spinner() {
-  return (
-    // h-6 matches the label's line height, so the button keeps its size while loading.
-    <span className="flex h-6 items-center">
-      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 animate-spin">
-        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="3" className="opacity-25" />
-        <path d="M21 12a9 9 0 0 0-9-9" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-      </svg>
-      <span className="sr-only">Sending</span>
-    </span>
-  )
-}
 
 function BackToLogin() {
   return (
@@ -105,7 +92,7 @@ export const ForgotPassword = () => {
               aria-busy={sending}
               className={`${primaryButtonClass} mt-6 w-full`}
             >
-              {sending ? <Spinner /> : cooldown > 0 ? `Resend email in ${cooldown}s` : "Resend email"}
+              {sending ? <Spinner label="Sending" /> : cooldown > 0 ? `Resend email in ${cooldown}s` : "Resend email"}
             </button>
             <button
               type="button"
@@ -165,7 +152,7 @@ export const ForgotPassword = () => {
               )}
 
               <button type="submit" disabled={sending} aria-busy={sending} className={`${primaryButtonClass} mt-6 w-full`}>
-                {sending ? <Spinner /> : "Send reset link"}
+                {sending ? <Spinner label="Sending" /> : "Send reset link"}
               </button>
             </form>
 

@@ -165,32 +165,22 @@ export async function requestPasswordReset(email) {
   }
 }
 
-export function resetPassword(password, confirmPassword, token, navigate) {
-  return async (dispatch) => {
-    const toastId = toast.loading("Loading...");
-    dispatch(setLoading(true));
-    try {
-      const response = await apiConnector("POST", RESETPASSWORD_API, {
-        password,
-        confirmPassword,
-        token,
-      });
-
-      console.log("RESETPASSWORD RESPONSE............", response);
-
-      if (!response.data.success) {
-        throw new Error(response.data.message);
-      }
-
-      toast.success("Password Reset Successfully");
-      navigate("/login");
-    } catch (error) {
-      console.log("RESETPASSWORD ERROR............", error);
-      toast.error(error.response.data.message);
+// Sets a new password using the token from the reset email. Resolves to { ok: true } or
+// { error, expired } (expired: the link is invalid or past its 5 minutes) for the page to show inline.
+export async function resetPassword(password, confirmPassword, token) {
+  try {
+    const response = await apiConnector("POST", RESETPASSWORD_API, { password, confirmPassword, token });
+    if (!response.data.success) {
+      throw new Error(response.data.message);
     }
-    dispatch(setLoading(false));
-    toast.dismiss(toastId);
-  };
+    return { ok: true };
+  } catch (error) {
+    console.log("RESETPASSWORD ERROR............", error);
+    return {
+      error: error.response?.data?.message ?? "Couldn't update your password. Check your connection and try again.",
+      expired: error.response?.status === 401,
+    };
+  }
 }
 
 export function logout(navigate) {
