@@ -23,7 +23,9 @@ export const getNotificationQueue = (): Queue<Delivery> | undefined => {
   return queue;
 };
 
-export const startNotificationWorker = (process: (delivery: Delivery) => Promise<void>): void => {
+export const startNotificationWorker = (
+  process: (delivery: Delivery) => Promise<void>,
+): void => {
   if (!isRedisConfigured || worker) return;
   worker = new Worker<Delivery>(QUEUE_NAME, (job) => process(job.data), {
     connection: createRedisConnection(),
@@ -37,7 +39,7 @@ export const startNotificationWorker = (process: (delivery: Delivery) => Promise
     const final = (job?.attemptsMade ?? 0) >= attempts;
     console.error(
       `Notification ${job?.name} ${final ? "failed permanently" : `failed (attempt ${job?.attemptsMade}/${attempts})`}:`,
-      error.message
+      error.message,
     );
   });
 };
