@@ -37,13 +37,14 @@ export const decodeCourseIds = (notes: Record<string, string | number>): string[
     .flatMap(([, value]) => String(value).split(","))
     .filter(Boolean);
 
-const isValidSignature = ({ orderId, paymentId, signature }: PaymentConfirmation): boolean => {
-  const expected = Buffer.from(
-    crypto.createHmac("sha256", env.razorpay.keySecret).update(`${orderId}|${paymentId}`).digest("hex")
-  );
+const hmacMatches = (secret: string, data: string | Buffer, signature: string): boolean => {
+  const expected = Buffer.from(crypto.createHmac("sha256", secret).update(data).digest("hex"));
   const received = Buffer.from(signature);
   return expected.length === received.length && crypto.timingSafeEqual(expected, received);
 };
+
+const isValidSignature = ({ orderId, paymentId, signature }: PaymentConfirmation): boolean =>
+  hmacMatches(env.razorpay.keySecret, `${orderId}|${paymentId}`, signature);
 
 export const createOrder = async (userId: string, courseIds: string[]) => {
   const courses = await Course.find({ _id: { $in: courseIds } }, "price studentsEnrolled").lean();
@@ -81,14 +82,65 @@ export const verifyAndEnroll = async (userId: string, confirmation: PaymentConfi
     throw AppError.badRequest("Payment failed");
   }
 
-  const courseIds = decodeCourseIds(notes);
-  await enrollStudent(userId, courseIds);
-  await recordPayment(userId, courseIds, {
+  await fulfillOrder(userId, notes, {
     orderId: confirmation.orderId,
     paymentId: confirmation.paymentId,
     amountInPaise: Number(order.amount),
     currency: order.currency,
   });
+};
+
+// Shared by the checkout callback and the webhook, which usually both arrive for the same order;
+// enrolling and recording are idempotent, so whichever comes second changes nothing.
+const fulfillOrder = async (
+  userId: string,
+  notes: Record<string, string | number>,
+  payment: { orderId: string; paymentId: string; amountInPaise: number; currency: string }
+): Promise<void> => {
+  const courseIds = decodeCourseIds(notes);
+  await enrollStudent(userId, courseIds);
+  await recordPayment(userId, courseIds, payment);
+};
+
+const FULFILLING_EVENTS = new Set(["order.paid", "payment.captured"]);
+
+interface RazorpayWebhookEvent {
+  event: string;
+  payload?: {
+    payment?: { entity?: { id?: string; order_id?: string; status?: string } };
+  };
+}
+
+// Verifies a Razorpay webhook and fulfills paid orders, so a student is enrolled even if their
+// browser closed before the checkout callback reached us. Resolves to whether the event was acted on.
+export const handleWebhook = async (rawBody: Buffer, signature: string): Promise<boolean> => {
+  if (!env.razorpay.webhookSecret) {
+    throw new AppError(503, "Webhook is not configured");
+  }
+  if (!hmacMatches(env.razorpay.webhookSecret, rawBody, signature)) {
+    throw AppError.badRequest("Invalid webhook signature");
+  }
+
+  const event = JSON.parse(rawBody.toString("utf8")) as RazorpayWebhookEvent;
+  if (!FULFILLING_EVENTS.has(event.event)) return false;
+
+  const payment = event.payload?.payment?.entity;
+  if (!payment?.id || !payment.order_id || payment.status !== "captured") return false;
+
+  // The order is fetched rather than read from the payload so amounts and notes come from Razorpay.
+  const order = await razorpay.orders.fetch(payment.order_id);
+  const notes = (order.notes ?? {}) as Record<string, string | number>;
+  const userId = String(notes.userId ?? "");
+  // Orders without our notes were created by something else on the same Razorpay account.
+  if (!Types.ObjectId.isValid(userId) || decodeCourseIds(notes).length === 0) return false;
+
+  await fulfillOrder(userId, notes, {
+    orderId: payment.order_id,
+    paymentId: payment.id,
+    amountInPaise: Number(order.amount),
+    currency: order.currency,
+  });
+  return true;
 };
 
 // Saves the purchase for the student's history. Upserting on the order id keeps a repeated
@@ -106,28 +158,34 @@ export const recordPayment = async (
   }: { orderId: string; paymentId: string; amountInPaise: number; currency: string; paidAt?: Date }
 ): Promise<boolean> => {
   const courses = await Course.find({ _id: { $in: courseIds } }, "courseName price thumbnail").lean();
-  const result = await Payment.updateOne(
-    { razorpayOrderId: orderId },
-    {
-      $setOnInsert: {
-        user: userId,
-        courses: courses.map((course) => ({
-          course: course._id,
-          courseName: course.courseName ?? "Untitled course",
-          price: course.price ?? 0,
-          thumbnail: course.thumbnail,
-        })),
-        amount: amountInPaise / 100,
-        currency,
-        razorpayOrderId: orderId,
-        razorpayPaymentId: paymentId,
-        ...(paidAt && { createdAt: paidAt, updatedAt: paidAt }),
+  try {
+    const result = await Payment.updateOne(
+      { razorpayOrderId: orderId },
+      {
+        $setOnInsert: {
+          user: userId,
+          courses: courses.map((course) => ({
+            course: course._id,
+            courseName: course.courseName ?? "Untitled course",
+            price: course.price ?? 0,
+            thumbnail: course.thumbnail,
+          })),
+          amount: amountInPaise / 100,
+          currency,
+          razorpayOrderId: orderId,
+          razorpayPaymentId: paymentId,
+          ...(paidAt && { createdAt: paidAt, updatedAt: paidAt }),
+        },
       },
-    },
-    // With an explicit date, Mongoose must not stamp its own timestamps over it.
-    { upsert: true, ...(paidAt && { timestamps: false }) }
-  );
-  return result.upsertedCount > 0;
+      // With an explicit date, Mongoose must not stamp its own timestamps over it.
+      { upsert: true, ...(paidAt && { timestamps: false }) }
+    );
+    return result.upsertedCount > 0;
+  } catch (error) {
+    // Two simultaneous upserts (checkout callback and webhook) can both try to insert; one wins.
+    if ((error as { code?: number }).code === 11000) return false;
+    throw error;
+  }
 };
 
 export const HISTORY_PAGE_SIZE = 10;

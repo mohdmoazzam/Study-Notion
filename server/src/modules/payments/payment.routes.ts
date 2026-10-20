@@ -4,6 +4,10 @@ import * as paymentController from "./payment.controller";
 
 export const paymentRoutes = Router();
 
+// Called by Razorpay, not a signed-in user; it authenticates with a signature instead.
+// Registered before the auth middleware below so that middleware doesn't apply to it.
+paymentRoutes.post("/webhook", paymentController.razorpayWebhook);
+
 paymentRoutes.use(authenticate, isStudent);
 
 paymentRoutes.post("/capturePayment", paymentController.capturePayment);

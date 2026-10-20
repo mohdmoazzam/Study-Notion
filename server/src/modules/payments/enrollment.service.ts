@@ -5,7 +5,7 @@ import { Course } from "../courses/course.model";
 import { CourseProgress } from "../progress/courseProgress.model";
 import { User } from "../users/user.model";
 
-// Idempotent: enrolling twice in the same course is a no-op.
+// Idempotent: enrolling twice in the same course is a no-op, and the email only goes out once.
 export const enrollStudent = async (userId: string, courseIds: string[]): Promise<void> => {
   const [user, courses] = await Promise.all([
     User.findById(userId, "firstName email").lean(),
@@ -21,7 +21,7 @@ export const enrollStudent = async (userId: string, courseIds: string[]): Promis
 
   await Promise.all(
     courses.map(async (course) => {
-      const [, progress] = await Promise.all([
+      const [enrollment, progress] = await Promise.all([
         Course.updateOne({ _id: course._id }, { $addToSet: { studentsEnrolled: userId } }),
         CourseProgress.findOneAndUpdate(
           { courseID: course._id, userId },
@@ -35,6 +35,8 @@ export const enrollStudent = async (userId: string, courseIds: string[]): Promis
         { $addToSet: { courses: course._id, ...(progress && { courseProgress: progress._id }) } }
       );
 
+      // Unmodified means the student was already enrolled (e.g. the webhook got here first).
+      if (enrollment.modifiedCount === 0) return;
       sendMailSafe(
         user.email,
         `Successfully Enrolled into ${course.courseName}`,

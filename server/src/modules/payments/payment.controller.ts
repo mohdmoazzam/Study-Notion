@@ -34,6 +34,17 @@ export const verifyPayment = asyncHandler(async (req, res) => {
   sendSuccess(res, 200, { message: "Payment verified" });
 });
 
+// Razorpay retries any non-2xx response, so events we don't act on still get a 200.
+export const razorpayWebhook = asyncHandler(async (req, res) => {
+  const signature = req.get("x-razorpay-signature");
+  if (!req.rawBody || !signature) {
+    throw AppError.badRequest("Invalid webhook request");
+  }
+
+  const handled = await paymentService.handleWebhook(req.rawBody, signature);
+  sendSuccess(res, 200, { message: handled ? "Event processed" : "Event ignored" });
+});
+
 // Query: ?search=<course name>&page=<n> (both optional).
 export const getPurchaseHistory = asyncHandler(async (req, res) => {
   const { id } = requireUser(req);

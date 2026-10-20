@@ -18,7 +18,15 @@ export const createApp = (): Express => {
   // Behind the host's proxy in production, so req.ip is the client's address (used by login lockouts).
   if (env.isProduction) app.set("trust proxy", 1);
   app.use(cors({ origin: env.corsOrigin, credentials: true }));
-  app.use(express.json({ limit: "1mb" }));
+  app.use(
+    express.json({
+      limit: "1mb",
+      // Webhook signatures are computed over the exact bytes sent, not the re-serialized JSON.
+      verify: (req, _res, buf) => {
+        (req as express.Request).rawBody = buf;
+      },
+    })
+  );
   app.use(cookieParser());
   app.use(
     fileUpload({

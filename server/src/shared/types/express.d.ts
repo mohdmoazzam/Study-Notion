@@ -5,6 +5,8 @@ declare global {
   namespace Express {
     interface Request {
       user?: AuthUser;
+      // The unparsed JSON body, kept for verifying webhook signatures.
+      rawBody?: Buffer;
     }
   }
 }
