@@ -9,7 +9,7 @@
 import mongoose from "mongoose";
 import { connectDatabase, disconnectDatabase } from "../lib/database";
 import { razorpay } from "../lib/razorpay";
-import { decodeCourseIds, recordPayment } from "../modules/payments/payment.service";
+import { decodeCoupon, decodeCourseIds, decodePlatformFee, recordPayment } from "../modules/payments/payment.service";
 import { User } from "../modules/users/user.model";
 
 const PAGE_SIZE = 100;
@@ -67,6 +67,8 @@ const main = async () => {
       paymentId,
       amountInPaise: Number(order.amount),
       currency: order.currency,
+      coupon: decodeCoupon(order.notes!),
+      platformFee: decodePlatformFee(order.notes!),
       paidAt: new Date(order.created_at * 1000),
     });
     if (created) saved++;

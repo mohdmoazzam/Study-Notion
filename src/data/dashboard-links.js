@@ -35,6 +35,13 @@ export const sidebarLinks = [
     icon: "VscCreditCard",
   },
   {
+    id: 9,
+    name: "Coupons",
+    path: "/dashboard/coupons",
+    type: ACCOUNT_TYPE.INSTRUCTOR,
+    icon: "VscTag",
+  },
+  {
     id: 5,
     name: "Enrolled Courses",
     path: "/dashboard/enrolled-courses",

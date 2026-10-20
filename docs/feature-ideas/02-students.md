@@ -15,7 +15,7 @@ currently lives only in the browser).
 
 ## 6. Coupons and discounts
 
-**Status:** Idea
+**Status:** Done
 
 **Why:** Launch offers and promotions drive sales.
 

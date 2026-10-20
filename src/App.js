@@ -34,6 +34,8 @@ import Payouts from "./components/core/Dashboard/Payouts";
 import SuperAdminLogin from "./pages/SuperAdmin/Login";
 import SuperAdminLayout from "./pages/SuperAdmin/Layout";
 import SuperAdminPayouts from "./pages/SuperAdmin/Payouts";
+import SuperAdminCoupons from "./pages/SuperAdmin/Coupons";
+import Coupons from "./components/core/Dashboard/Coupons";
 
 function App() {
   const { user } = useSelector((state) => state.profile);
@@ -58,6 +60,7 @@ function App() {
         <Route path="/super-admin" element={<SuperAdminLayout />}>
           <Route index element={<Navigate to="payouts" replace />} />
           <Route path="payouts" element={<SuperAdminPayouts />} />
+          <Route path="coupons" element={<SuperAdminCoupons />} />
         </Route>
         <Route path="/" element={<Home />} />
         <Route path="/catalog/:catalogName" element={<Catalog />} />
@@ -147,6 +150,7 @@ function App() {
               />
               <Route path="dashboard/instructor" element={<Instructor />} />
               <Route path="dashboard/payouts" element={<Payouts />} />
+              <Route path="dashboard/coupons" element={<Coupons />} />
             </>
           )}
           ;

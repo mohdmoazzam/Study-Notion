@@ -4,15 +4,17 @@ import { env } from "../../config/env";
 import { razorpay } from "../../lib/razorpay";
 import { AppError } from "../../shared/errors";
 import { escapeRegex } from "../../shared/utils/regex";
+import { quoteOrder, recordCouponUse, type OrderQuote } from "../coupons/coupon.service";
 import { Course } from "../courses/course.model";
 import { notifySafe } from "../notifications/notification.service";
 import { User } from "../users/user.model";
 import { enrollStudent } from "./enrollment.service";
-import { Payment } from "./payment.model";
+import { Payment, type IAppliedCoupon } from "./payment.model";
 
 // Razorpay notes allow at most 15 keys of 256 chars each, so course ids are chunked across keys.
+// The other four keys hold the user id, the coupon (code and discount) and the platform fee.
 const IDS_PER_NOTE = 10;
-const MAX_NOTE_KEYS = 14;
+const MAX_NOTE_KEYS = 11;
 const COURSE_NOTE_PREFIX = "courses_";
 export const MAX_COURSES_PER_ORDER = IDS_PER_NOTE * MAX_NOTE_KEYS;
 
@@ -36,7 +38,18 @@ export const decodeCourseIds = (notes: Record<string, string | number>): string[
     .flatMap(([, value]) => String(value).split(","))
     .filter(Boolean);
 
-const hmacMatches = (secret: string, data: string | Buffer, signature: string): boolean => {
+const encodeQuote = ({ coupon, discount, platformFee }: OrderQuote): Record<string, string> => ({
+  ...(coupon && { coupon: coupon.code, discount: String(discount) }),
+  ...(platformFee > 0 && { platformFee: String(platformFee) }),
+});
+
+export const decodeCoupon = (notes: Record<string, string | number>): IAppliedCoupon | undefined =>
+  notes.coupon ? { code: String(notes.coupon), discount: Number(notes.discount) || 0 } : undefined;
+
+export const decodePlatformFee = (notes: Record<string, string | number>): number | undefined =>
+  notes.platformFee === undefined ? undefined : Number(notes.platformFee) || 0;
+
+const hmacMatches =(secret: string, data: string | Buffer, signature: string): boolean => {
   const expected = Buffer.from(crypto.createHmac("sha256", secret).update(data).digest("hex"));
   const received = Buffer.from(signature);
   return expected.length === received.length && crypto.timingSafeEqual(expected, received);
@@ -45,24 +58,42 @@ const hmacMatches = (secret: string, data: string | Buffer, signature: string): 
 const isValidSignature = ({ orderId, paymentId, signature }: PaymentConfirmation): boolean =>
   hmacMatches(env.razorpay.keySecret, `${orderId}|${paymentId}`, signature);
 
-export const createOrder = async (userId: string, courseIds: string[]) => {
-  const courses = await Course.find({ _id: { $in: courseIds } }, "price studentsEnrolled").lean();
+// Prices the courses with the optional coupon, using the prices stored on the server.
+const quoteForStudent = async (userId: string, courseIds: string[], couponCode?: string) => {
+  const courses = await Course.find({ _id: { $in: courseIds } }, "price studentsEnrolled instructor").lean();
   if (courses.length !== courseIds.length) {
     throw AppError.notFound("Could not find the course");
   }
   if (courses.some((course) => course.studentsEnrolled.some((id) => id.toString() === userId))) {
     throw AppError.conflict("Student is already enrolled");
   }
+  return quoteOrder(courses, couponCode);
+};
 
-  const totalAmount = courses.reduce((sum, course) => sum + (course.price ?? 0), 0);
+// What the cart shows after "Apply coupon"; createOrder prices the order again the same way.
+export const previewOrder = quoteForStudent;
+
+// Resolves to `free: true` when a coupon covered the whole price and the student is already enrolled.
+export const createOrder = async (userId: string, courseIds: string[], couponCode?: string) => {
+  const quote = await quoteForStudent(userId, courseIds, couponCode);
+  const notes = { userId, ...encodeCourseIds(courseIds), ...encodeQuote(quote) };
+  const receipt = `rcpt_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
+
+  // Razorpay can't create a ₹0 order. Free courses without a coupon still go through it as before.
+  if (quote.coupon && quote.total === 0) {
+    const orderId = `free_${receipt.slice("rcpt_".length)}`;
+    await fulfillOrder(userId, notes, { orderId, paymentId: orderId, amountInPaise: 0, currency: "INR" });
+    return { free: true as const, quote };
+  }
 
   try {
-    return await razorpay.orders.create({
-      amount: Math.round(totalAmount * 100),
+    const order = await razorpay.orders.create({
+      amount: Math.round(quote.total * 100),
       currency: "INR",
-      receipt: `rcpt_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`,
-      notes: { userId, ...encodeCourseIds(courseIds) },
+      receipt,
+      notes,
     });
+    return { free: false as const, quote, order };
   } catch (error) {
     console.error("Razorpay order creation failed:", error);
     throw AppError.badGateway("Could not initiate order");
@@ -97,8 +128,11 @@ const fulfillOrder = async (
   payment: { orderId: string; paymentId: string; amountInPaise: number; currency: string }
 ): Promise<void> => {
   const courseIds = decodeCourseIds(notes);
+  const coupon = decodeCoupon(notes);
   await enrollStudent(userId, courseIds);
-  await recordPayment(userId, courseIds, payment);
+  const recorded = await recordPayment(userId, courseIds, { ...payment, coupon, platformFee: decodePlatformFee(notes) });
+  // Only the first fulfillment of an order counts as a redemption.
+  if (recorded && coupon) await recordCouponUse(coupon.code);
 };
 
 const FULFILLING_EVENTS = new Set(["order.paid", "payment.captured"]);
@@ -153,8 +187,18 @@ export const recordPayment = async (
     paymentId,
     amountInPaise,
     currency,
+    coupon,
+    platformFee,
     paidAt,
-  }: { orderId: string; paymentId: string; amountInPaise: number; currency: string; paidAt?: Date }
+  }: {
+    orderId: string;
+    paymentId: string;
+    amountInPaise: number;
+    currency: string;
+    coupon?: IAppliedCoupon;
+    platformFee?: number;
+    paidAt?: Date;
+  }
 ): Promise<boolean> => {
   const courses = await Course.find({ _id: { $in: courseIds } }, "courseName price thumbnail").lean();
   try {
@@ -171,6 +215,8 @@ export const recordPayment = async (
           })),
           amount: amountInPaise / 100,
           currency,
+          ...(coupon && { coupon }),
+          ...(platformFee !== undefined && { platformFee }),
           razorpayOrderId: orderId,
           razorpayPaymentId: paymentId,
           ...(paidAt && { createdAt: paidAt, updatedAt: paidAt }),

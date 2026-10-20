@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "react-hot-toast"
 import { FiArrowRight, FiInfo, FiShoppingCart, FiX } from "react-icons/fi"
 import { useDispatch, useSelector, useStore } from "react-redux"
 import { useNavigate } from "react-router-dom"
 
 import { refreshCartCourses } from "../../../../services/operations/cartAPI"
-import { buyCourse } from "../../../../services/operations/studentFeaturesAPI"
+import { applyCoupon, buyCourse } from "../../../../services/operations/studentFeaturesAPI"
 import { removeFromCart, restoreToCart, syncCart } from "../../../../slices/cartSlice"
 import { formatAmount } from "../../../../utils/formatPrice"
 import LinkButton from "../../../common/LinkButton"
+import usePlatformFee from "../../../../hooks/usePlatformFee"
+import CheckoutDialog from "../../Checkout/CheckoutDialog"
 import RenderCartCourses from "./RenderCartCourses"
 import RenderTotalAmount from "./RenderTotalAmount"
 
@@ -24,6 +26,13 @@ const Cart = () => {
   const { paymentLoading } = useSelector((state) => state.course)
   const [starting, setStarting] = useState(false)
   const [notice, setNotice] = useState(null)
+  // { code, quote } once the server has accepted a coupon for this cart.
+  const [coupon, setCoupon] = useState(null)
+  const [applyingCoupon, setApplyingCoupon] = useState(false)
+  const [couponError, setCouponError] = useState(null)
+  const [checkoutOpen, setCheckoutOpen] = useState(false)
+  const couponCode = useRef(null)
+  couponCode.current = coupon?.code ?? null
 
   // Courses the student already owns would make the whole order fail, so they're flagged up front.
   const ownedIds = useMemo(() => new Set((user?.courses ?? []).map((course) => String(course?._id ?? course))), [user])
@@ -57,6 +66,45 @@ const Cart = () => {
     }
   }, [store, dispatch])
 
+  // The discount depends on what's in the cart and at what price, so an applied coupon is
+  // re-checked with the server whenever either changes.
+  const pricingKey = cart.map((course) => `${course._id}:${course.price}`).join(",")
+  useEffect(() => {
+    const code = couponCode.current
+    if (!code || !pricingKey) return undefined
+    let active = true
+    const ids = pricingKey.split(",").map((entry) => entry.split(":")[0])
+    applyCoupon(token, ids, code).then(({ quote, error }) => {
+      if (!active) return
+      if (quote) {
+        setCoupon({ code, quote })
+      } else {
+        setCoupon(null)
+        setCouponError(`${code} was removed: ${error}`)
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [pricingKey, token])
+
+  const handleApplyCoupon = async (code) => {
+    setApplyingCoupon(true)
+    setCouponError(null)
+    const { quote, error } = await applyCoupon(token, cart.map((course) => course._id), code)
+    setApplyingCoupon(false)
+    if (quote) {
+      setCoupon({ code: quote.coupon?.code ?? code, quote })
+    } else {
+      setCouponError(error)
+    }
+  }
+
+  const handleRemoveCoupon = () => {
+    setCoupon(null)
+    setCouponError(null)
+  }
+
   const handleRemove = (course) => {
     const index = cart.findIndex((item) => item._id === course._id)
     dispatch(removeFromCart(course._id))
@@ -82,16 +130,32 @@ const Cart = () => {
     )
   }
 
-  const handleCheckout = async () => {
+  // Keeps the cart's coupon in step with what was left applied in the checkout summary.
+  const syncCoupon = (code) => {
+    if ((code ?? null) === (coupon?.code ?? null)) return
+    if (code) handleApplyCoupon(code)
+    else handleRemoveCoupon()
+  }
+
+  // Checkout opens the order summary first; Razorpay opens once the student confirms there.
+  const handleCheckout = () => setCheckoutOpen(true)
+
+  const confirmCheckout = async (code) => {
+    setCheckoutOpen(false)
+    syncCoupon(code)
     setStarting(true)
     try {
-      await buyCourse(token, cart.map((course) => course._id), user, navigate, dispatch)
+      await buyCourse(token, cart.map((course) => course._id), user, navigate, dispatch, code)
     } finally {
       setStarting(false)
     }
   }
 
   const processing = starting || paymentLoading
+  // With a coupon every figure comes from the server's quote; otherwise the fee is added here for display.
+  const fallbackFee = usePlatformFee(total)
+  const platformFee = coupon ? coupon.quote.platformFee ?? 0 : fallbackFee
+  const payable = coupon ? coupon.quote.total : total + (platformFee ?? 0)
   const blockedReason = ownedInCart.length
     ? `Remove ${ownedInCart.length === 1 ? "the course" : "the courses"} you already own to check out.`
     : null
@@ -138,10 +202,17 @@ const Cart = () => {
         <div className="lg:sticky lg:top-0">
           <RenderTotalAmount
             courses={cart}
-            total={total}
+            subtotal={coupon ? coupon.quote.subtotal : total}
+            platformFee={platformFee}
+            total={payable}
             onCheckout={handleCheckout}
             processing={processing}
             blockedReason={blockedReason}
+            coupon={coupon}
+            applyingCoupon={applyingCoupon}
+            couponError={couponError}
+            onApplyCoupon={handleApplyCoupon}
+            onRemoveCoupon={handleRemoveCoupon}
           />
         </div>
       </div>
@@ -151,7 +222,7 @@ const Cart = () => {
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
           <div>
             <p className="text-xs text-content-muted">Total</p>
-            <p className="text-lg font-bold text-content">{formatAmount(total)}</p>
+            <p className="text-lg font-bold text-content">{formatAmount(payable)}</p>
           </div>
           <button
             type="button"
@@ -163,6 +234,18 @@ const Cart = () => {
           </button>
         </div>
       </div>
+
+      {checkoutOpen && (
+        <CheckoutDialog
+          courses={cart}
+          initialCode={coupon?.code}
+          onConfirm={confirmCheckout}
+          onClose={(code) => {
+            setCheckoutOpen(false)
+            syncCoupon(code)
+          }}
+        />
+      )}
     </div>
   )
 }

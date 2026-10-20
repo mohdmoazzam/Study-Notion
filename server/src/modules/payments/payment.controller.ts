@@ -4,10 +4,7 @@ import { asyncHandler, sendSuccess } from "../../shared/http";
 import { parseNonNegativeNumber, requireFields, requireUser } from "../../shared/request";
 import * as paymentService from "./payment.service";
 
-export const capturePayment = asyncHandler(async (req, res) => {
-  const { id } = requireUser(req);
-  const { courses } = req.body;
-
+const parseCourseIds = (courses: unknown): string[] => {
   if (!Array.isArray(courses) || courses.length === 0) {
     throw AppError.badRequest("Please provide course ids");
   }
@@ -15,11 +12,43 @@ export const capturePayment = asyncHandler(async (req, res) => {
   if (courseIds.length > paymentService.MAX_COURSES_PER_ORDER) {
     throw AppError.badRequest("Too many courses in one order");
   }
+  return courseIds;
+};
 
-  const order = await paymentService.createOrder(id, courseIds);
+const parseCouponCode = (coupon: unknown): string | undefined =>
+  typeof coupon === "string" && coupon.trim() ? coupon.trim().slice(0, 20) : undefined;
+
+// Public: pricing settings the checkout shows before an order is created.
+export const getCheckoutConfig = asyncHandler(async (_req, res) => {
+  sendSuccess(res, 200, { platformFee: env.platformFee });
+});
+
+// Body: { courses, coupon? }. The amount is always worked out on the server.
+export const capturePayment = asyncHandler(async (req, res) => {
+  const { id } = requireUser(req);
+  const courseIds = parseCourseIds(req.body.courses);
+
+  const result = await paymentService.createOrder(id, courseIds, parseCouponCode(req.body.coupon));
+  if (result.free) {
+    sendSuccess(res, 200, { message: "Enrolled", free: true, quote: result.quote });
+    return;
+  }
   // The client reads the order from `message`. The key id is public; Checkout must use the same
   // Razorpay account that created the order, so the server is the single source for it.
-  sendSuccess(res, 201, { message: order, data: order, key: env.razorpay.keyId });
+  sendSuccess(res, 201, { message: result.order, data: result.order, quote: result.quote, key: env.razorpay.keyId });
+});
+
+// Body: { courses, coupon }. Returns the discounted price for the cart, or a 400 saying why the coupon doesn't apply.
+export const applyCoupon = asyncHandler(async (req, res) => {
+  const { id } = requireUser(req);
+  const courseIds = parseCourseIds(req.body.courses);
+  const coupon = parseCouponCode(req.body.coupon);
+  if (!coupon) {
+    throw AppError.badRequest("Enter a coupon code");
+  }
+
+  const quote = await paymentService.previewOrder(id, courseIds, coupon);
+  sendSuccess(res, 200, { message: "Coupon applied", data: quote });
 });
 
 export const verifyPayment = asyncHandler(async (req, res) => {

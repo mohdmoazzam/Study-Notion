@@ -28,6 +28,16 @@ const isLocalUrl = (url: string) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]
 const frontendUrl =
   (isProduction ? appUrls.find((url) => !isLocalUrl(url)) : undefined) || appUrls[0] || "http://localhost:3000";
 
+const DEFAULT_PLATFORM_FEE = 17;
+const parseFee = (value: string | undefined): number => {
+  if (value === undefined || value.trim() === "") return DEFAULT_PLATFORM_FEE;
+  const fee = Number(value);
+  if (!Number.isFinite(fee) || fee < 0) {
+    throw new Error("PLATFORM_FEE must be a non-negative number of rupees");
+  }
+  return fee;
+};
+
 export const env = Object.freeze({
   port: Number(process.env.PORT) || 4000,
   isProduction,
@@ -62,6 +72,8 @@ export const env = Object.freeze({
     apiSecret: required("API_SECRET"),
     folder: process.env.FOLDER_NAME ?? "StudyNotion",
   },
+  // Flat fee in rupees added to every paid order (after any coupon discount). Not part of instructor earnings.
+  platformFee: parseFee(process.env.PLATFORM_FEE),
   razorpay: {
     keyId: required("RAZORPAY_KEY"),
     keySecret: required("RAZORPAY_SECRET"),

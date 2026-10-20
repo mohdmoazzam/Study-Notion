@@ -19,6 +19,8 @@ export const profileEndpoints = {
 
 // STUDENTS ENDPOINTS
 export const studentEndpoints = {
+  CHECKOUT_CONFIG_API: BASE_URL + "/payment/config",
+  APPLY_COUPON_API: BASE_URL + "/payment/applyCoupon",
   COURSE_PAYMENT_API: BASE_URL + "/payment/capturePayment",
   COURSE_VERIFY_API: BASE_URL + "/payment/verifyPayment",
   SEND_PAYMENT_SUCCESS_EMAIL_API: BASE_URL + "/payment/sendPaymentSuccessEmail",
@@ -79,6 +81,12 @@ export const payoutEndpoints = {
   IFSC_LOOKUP_API: BASE_URL + "/payout/ifsc",
 }
 
+// INSTRUCTOR COUPON ENDPOINTS
+export const couponEndpoints = {
+  COUPONS_API: BASE_URL + "/coupon",
+  COURSE_OFFERS_API: BASE_URL + "/coupon/offers",
+}
+
 // NOTIFICATION ENDPOINTS
 export const notificationEndpoints = {
   NOTIFICATIONS_API: BASE_URL + "/notifications",
@@ -92,4 +100,5 @@ export const superAdminEndpoints = {
   SUPER_ADMIN_LOGIN_API: BASE_URL + "/super-admin/login",
   SUPER_ADMIN_SESSION_API: BASE_URL + "/super-admin/session",
   SUPER_ADMIN_PAYOUTS_API: BASE_URL + "/super-admin/payouts",
+  SUPER_ADMIN_COUPONS_API: BASE_URL + "/super-admin/coupons",
 }

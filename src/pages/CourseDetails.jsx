@@ -28,6 +28,8 @@ import InstructorCard from "../components/core/course/InstructorCard"
 import CoursePurchaseCard, { primaryButton } from "../components/core/course/CoursePurchaseCard"
 import CourseReviews from "../components/core/course/CourseReviews"
 import LearningOutcomes, { parseOutcomes } from "../components/core/course/LearningOutcomes"
+import CheckoutDialog from "../components/core/Checkout/CheckoutDialog"
+import { fetchOffers } from "../services/operations/couponAPI"
 import { fetchCourseDetails } from "../services/operations/courseDetailsAPI"
 import { buyCourse } from "../services/operations/studentFeaturesAPI"
 import { addToCart } from "../slices/cartSlice"
@@ -35,7 +37,7 @@ import GetAvgRating from "../utils/avgRating"
 import { toCatalogSlug } from "../utils/catalog"
 import { ACCOUNT_TYPE } from "../utils/constants"
 import { formattedDate, getCreatedAt } from "../utils/dateFormatter"
-import { formatPrice } from "../utils/formatPrice"
+import { formatAmount, formatPrice } from "../utils/formatPrice"
 
 const avatarFor = (person) =>
   person?.image ||
@@ -94,6 +96,20 @@ export const CourseDetails = () => {
   const [details, setDetails] = useState(null)
   const [confirmationModal, setConfirmationModal] = useState(null)
   const [activeSectionId, setActiveSectionId] = useState(null)
+  // Public coupons for this course, best first. They're applied in the checkout summary.
+  const [offers, setOffers] = useState([])
+  // Set while the checkout summary is open.
+  const [checkout, setCheckout] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    setOffers([])
+    setCheckout(null)
+    fetchOffers([courseId]).then((list) => active && setOffers(list))
+    return () => {
+      active = false
+    }
+  }, [courseId])
 
   useEffect(() => {
     let active = true
@@ -151,8 +167,14 @@ export const CourseDetails = () => {
     return true
   }
 
+  // "Buy now" opens the order summary first; Razorpay opens once the student confirms there.
   const handleBuyCourse = () => {
-    if (canPurchase("purchase this course")) buyCourse(token, [courseId], user, navigate, dispatch)
+    if (canPurchase("purchase this course")) setCheckout({})
+  }
+
+  const confirmCheckout = (code) => {
+    setCheckout(null)
+    buyCourse(token, [courseId], user, navigate, dispatch, code)
   }
 
   const handleAddToCart = () => {
@@ -302,6 +324,7 @@ export const CourseDetails = () => {
             course={course}
             isEnrolled={isEnrolled}
             paymentLoading={paymentLoading}
+            offers={offers}
             onBuy={handleBuyCourse}
             onAddToCart={handleAddToCart}
             onGoToCourse={goToCourse}
@@ -363,7 +386,14 @@ export const CourseDetails = () => {
               <h2 className="text-3xl font-extrabold tracking-tight text-content">Ready to start learning?</h2>
               <p className="mx-auto mt-3 max-w-xl text-content-muted">
                 Get lifetime access to <span className="font-semibold text-content">{course.courseName}</span> for{" "}
-                <span className="font-semibold text-content">{formatPrice(course.price)}</span>.
+                <span className="font-semibold text-content">{formatPrice(course.price)}</span>
+                {offers[0] && (
+                  <>
+                    {" "}
+                    (or {formatAmount(offers[0].total)} with code <span className="font-mono font-semibold text-content">{offers[0].code}</span>)
+                  </>
+                )}
+                .
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-3">
                 <button type="button" onClick={handleBuyCourse} disabled={paymentLoading} className={primaryButton}>
@@ -384,6 +414,14 @@ export const CourseDetails = () => {
 
       <Footer />
       {confirmationModal && <ConfirmationModal modalData={confirmationModal} />}
+      {checkout && (
+        <CheckoutDialog
+          courses={[course]}
+          initialCode={checkout.code}
+          onConfirm={confirmCheckout}
+          onClose={() => setCheckout(null)}
+        />
+      )}
     </div>
   )
 }

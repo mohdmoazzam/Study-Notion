@@ -1,7 +1,7 @@
 import copy from "copy-to-clipboard"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "react-hot-toast"
-import { FiBookOpen, FiCheckCircle, FiChevronLeft, FiChevronRight, FiCopy, FiCreditCard, FiPlayCircle, FiSearch, FiShoppingBag, FiX } from "react-icons/fi"
+import { FiBookOpen, FiCheckCircle, FiChevronLeft, FiChevronRight, FiCopy, FiCreditCard, FiPlayCircle, FiSearch, FiShoppingBag, FiTag, FiX } from "react-icons/fi"
 import { useSelector } from "react-redux"
 import { Link, useSearchParams } from "react-router-dom"
 
@@ -42,6 +42,15 @@ function OrderCard({ payment }) {
           <p className="font-semibold text-content">{formatDateTime(payment.createdAt)}</p>
           <p className="mt-0.5 text-sm text-content-muted">
             {payment.courses.length} {payment.courses.length === 1 ? "course" : "courses"}
+            {payment.platformFee > 0 && ` · incl. ${formatAmount(payment.platformFee)} platform fee`}
+            {payment.coupon && (
+              <>
+                {" · "}
+                <span className="inline-flex items-center gap-1 text-accent">
+                  <FiTag aria-hidden="true" /> {payment.coupon.code} saved {formatAmount(payment.coupon.discount)}
+                </span>
+              </>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-3 sm:flex-row-reverse">
