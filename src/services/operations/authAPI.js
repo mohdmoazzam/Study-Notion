@@ -10,6 +10,7 @@ const {
   SENDOTP_API,
   SIGNUP_API,
   LOGIN_API,
+  GOOGLE_AUTH_API,
   RESETPASSTOKEN_API,
   RESETPASSWORD_API,
 } = endpoints;
@@ -100,13 +101,7 @@ export function login(email, password, accountType, navigate) {
       }
 
       toast.success("Login Successful");
-      dispatch(setToken(response.data.token));
-      const userImage = response.data?.user?.image
-        ? response.data.user.image
-        : `https://api.dicebear.com/5.x/initials/svg?seed=${response.data.user.firstName} ${response.data.user.lastName}`;
-      dispatch(setUser({ ...response.data.user, image: userImage }));
-      localStorage.setItem("token", JSON.stringify(response.data.token));
-      navigate("/dashboard/my-profile");
+      startSession(dispatch, response.data, navigate);
     } catch (error) {
       console.log("LOGIN API ERROR............", error);
       toast.error(error.response?.data?.message || "Login failed. Please try again.");
@@ -114,6 +109,42 @@ export function login(email, password, accountType, navigate) {
     dispatch(setLoading(false));
     toast.dismiss(toastId);
   };
+}
+
+// Logs in with a Google ID token, creating an `accountType` account when the email is new.
+export function googleLogin(credential, accountType, navigate) {
+  return async (dispatch) => {
+    const toastId = toast.loading("Loading...");
+    dispatch(setLoading(true));
+    try {
+      const response = await apiConnector("POST", GOOGLE_AUTH_API, {
+        credential,
+        accountType,
+      });
+
+      if (!response.data.success) {
+        throw new Error(response.data.message);
+      }
+
+      toast.success(response.data.created ? "Account created" : "Login Successful");
+      startSession(dispatch, response.data, navigate);
+    } catch (error) {
+      console.log("GOOGLE AUTH API ERROR............", error);
+      toast.error(error.response?.data?.message || "Google sign-in failed. Please try again.");
+    }
+    dispatch(setLoading(false));
+    toast.dismiss(toastId);
+  };
+}
+
+function startSession(dispatch, { token, user }, navigate) {
+  dispatch(setToken(token));
+  const userImage = user?.image
+    ? user.image
+    : `https://api.dicebear.com/5.x/initials/svg?seed=${user.firstName} ${user.lastName}`;
+  dispatch(setUser({ ...user, image: userImage }));
+  localStorage.setItem("token", JSON.stringify(token));
+  navigate("/dashboard/my-profile");
 }
 
 // Asks the server to email a password reset link. Resolves to { ok: true } or { error, notFound }

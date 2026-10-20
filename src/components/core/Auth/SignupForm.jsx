@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom"
 import { sendOtp } from "../../../services/operations/authAPI"
 import { setSignupData } from "../../../slices/authSlice"
 import { ACCOUNT_TYPE } from "../../../utils/constants"
+import GoogleAuthButton from "./GoogleAuthButton"
 
 const ROLE_OPTIONS = [
   { type: ACCOUNT_TYPE.STUDENT, label: "Student", description: "I want to learn", Icon: FaUserGraduate },
@@ -126,6 +127,8 @@ function SignupForm() {
           )
         })}
       </div>
+
+      <GoogleAuthButton accountType={accountType} text="signup_with" />
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <Field label="First name" Icon={FiUser}>

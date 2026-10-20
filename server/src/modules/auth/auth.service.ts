@@ -1,6 +1,8 @@
 import crypto from "crypto";
 import bcrypt from "bcrypt";
+import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
+import type { HydratedDocument } from "mongoose";
 import { env } from "../../config/env";
 import { otpTemplate } from "../../emails/otpVerification";
 import { passwordUpdated } from "../../emails/passwordUpdated";
@@ -8,7 +10,7 @@ import { sendMail, sendMailSafe } from "../../lib/mailer";
 import { AppError } from "../../shared/errors";
 import type { AccountType } from "../../shared/types/auth";
 import { Profile } from "../users/profile.model";
-import { User } from "../users/user.model";
+import { type IUser, User } from "../users/user.model";
 import { OTP } from "./otp.model";
 
 const SALT_ROUNDS = 10;
@@ -125,21 +127,30 @@ export const logIn = async (
   if (!user) {
     throw AppError.notFound("User is not registered");
   }
+  if (!user.password) {
+    throw AppError.unauthorized(
+      "This account uses Google sign-in. Continue with Google, or reset your password to set one.",
+    );
+  }
   if (!(await bcrypt.compare(password, user.password))) {
     throw AppError.unauthorized("Entered password is incorrect.Try again");
   }
   // Checked after the password so the account's role isn't revealed to someone without it.
-  // Admins have no login option of their own, so they may sign in under either type.
-  if (
-    accountType &&
-    user.accountType !== "Admin" &&
-    user.accountType !== accountType
-  ) {
+  assertAccountType(user.accountType, accountType);
+
+  return issueSession(user);
+};
+
+// Admins have no login option of their own, so they may sign in under either type.
+const assertAccountType = (actual: AccountType, selected?: AccountType) => {
+  if (selected && actual !== "Admin" && actual !== selected) {
     throw AppError.forbidden(
-      `This is a ${user.accountType} account. Please select ${user.accountType} to log in.`,
+      `This is a ${actual} account. Please select ${actual} to log in.`,
     );
   }
+};
 
+const issueSession = (user: HydratedDocument<IUser>) => {
   const token = jwt.sign(
     {
       email: user.email,
@@ -150,8 +161,84 @@ export const logIn = async (
     { expiresIn: env.jwtExpiresInSeconds },
   );
 
-  const { password: _password, ...publicUser } = user.toObject();
+  const { password: _password, googleId: _googleId, ...publicUser } = user.toObject();
   return { token, user: { ...publicUser, token } };
+};
+
+const googleClient = new OAuth2Client();
+
+const verifyGoogleCredential = async (credential: string) => {
+  if (!env.googleClientId) {
+    throw AppError.badRequest("Google sign-in is not configured");
+  }
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: env.googleClientId,
+    });
+    const payload = ticket.getPayload();
+    if (payload?.email && payload.email_verified) return payload;
+  } catch {
+    // Falls through to the generic error below.
+  }
+  throw AppError.unauthorized("Google sign-in failed. Please try again.");
+};
+
+// Logs in the account matching the Google email, or creates one with `accountType` when none exists.
+// Google has already verified the email, so no OTP step is needed.
+export const googleAuth = async (credential: string, accountType?: AccountType) => {
+  const google = await verifyGoogleCredential(credential);
+  const email = google.email as string;
+
+  // By googleId too, in case the Google account's email changed after linking.
+  // Case-insensitive so accounts registered as "Name@Gmail.com" still match.
+  const existing = await User.findOne({ $or: [{ googleId: google.sub }, { email }] })
+    .collation({ locale: "en", strength: 2 })
+    .select("+googleId")
+    .populate("additionalDetails");
+  if (existing) {
+    assertAccountType(existing.accountType, accountType);
+    if (!existing.googleId) {
+      existing.googleId = google.sub;
+      await existing.save();
+    }
+    return { ...issueSession(existing), created: false };
+  }
+
+  const type = accountType ?? "Student";
+  if (!SELF_SIGNUP_ACCOUNT_TYPES.includes(type)) {
+    throw AppError.badRequest("Invalid account type");
+  }
+
+  const firstName = google.given_name || google.name || email.split("@")[0];
+  const lastName = google.family_name ?? "";
+  const profile = await Profile.create({
+    gender: null,
+    dateOfBirth: null,
+    about: null,
+    contactNumber: null,
+  });
+
+  let user;
+  try {
+    user = await User.create({
+      firstName,
+      lastName,
+      email,
+      googleId: google.sub,
+      accountType: type,
+      additionalDetails: profile._id,
+      image:
+        google.picture ||
+        `https://api.dicebear.com/5.x/initials/svg?seed=${encodeURIComponent(`${firstName} ${lastName}`)}`,
+    });
+  } catch (error) {
+    await profile.deleteOne();
+    throw error;
+  }
+
+  await user.populate("additionalDetails");
+  return { ...issueSession(user), created: true };
 };
 
 export const changePassword = async (
@@ -162,6 +249,11 @@ export const changePassword = async (
   const user = await User.findById(userId).select("+password");
   if (!user) {
     throw AppError.notFound("User not found");
+  }
+  if (!user.password) {
+    throw AppError.badRequest(
+      "Your account doesn't have a password yet. Use \"Forgot password\" on the login page to set one.",
+    );
   }
   if (!(await bcrypt.compare(oldPassword, user.password))) {
     throw AppError.unauthorized("The password is incorrect");

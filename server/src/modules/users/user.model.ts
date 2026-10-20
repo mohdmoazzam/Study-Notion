@@ -5,7 +5,9 @@ export interface IUser {
   firstName: string;
   lastName: string;
   email: string;
-  password: string;
+  // Unset for accounts created through Google sign-in until one is set via password reset.
+  password?: string;
+  googleId?: string;
   accountType: AccountType;
   active: boolean;
   approved: boolean;
@@ -22,10 +24,12 @@ export interface IUser {
 const userSchema = new Schema<IUser>(
   {
     firstName: { type: String, required: true, trim: true },
-    lastName: { type: String, required: true, trim: true },
+    // Google accounts don't always carry a family name.
+    lastName: { type: String, trim: true, default: "" },
     email: { type: String, required: true, trim: true, unique: true },
     // Secrets are excluded from every query unless explicitly selected with "+field".
-    password: { type: String, required: true, select: false },
+    password: { type: String, select: false },
+    googleId: { type: String, select: false, index: { unique: true, sparse: true } },
     accountType: { type: String, enum: ACCOUNT_TYPES, required: true },
     active: { type: Boolean, default: true },
     approved: { type: Boolean, default: true },

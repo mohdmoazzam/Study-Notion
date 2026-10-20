@@ -7,6 +7,7 @@ import { Link, useNavigate } from "react-router-dom"
 
 import { login } from "../../../services/operations/authAPI"
 import { ACCOUNT_TYPE } from "../../../utils/constants"
+import GoogleAuthButton from "./GoogleAuthButton"
 
 const ROLE_OPTIONS = [
   { type: ACCOUNT_TYPE.STUDENT, label: "Student", Icon: FaUserGraduate },
@@ -67,6 +68,8 @@ function LoginForm() {
           )
         })}
       </div>
+
+      <GoogleAuthButton accountType={accountType} text="signin_with" />
 
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-medium text-richblack-50">Email address</span>

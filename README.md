@@ -109,6 +109,9 @@ Optional backend settings:
 | `CONTACT_INBOX` | Address that receives contact-form messages | Project owner's address |
 | `NODE_ENV` | Set to `production` for secure, cross-site auth cookies | `development` |
 | `DNS_SERVERS` | DNS servers for the backend to use, e.g. `8.8.8.8,1.1.1.1`, if your network can't resolve `mongodb+srv://` addresses | System DNS |
+| `GOOGLE_CLIENT_ID` | OAuth client ID for "Sign in with Google" (set the same value as `REACT_APP_GOOGLE_CLIENT_ID` in the frontend `.env`) | Google sign-in disabled |
+
+To enable Google sign-in, create an OAuth client ID of type **Web application** in the [Google Cloud Console](https://console.cloud.google.com/apis/credentials) and add your frontend URLs (e.g. `http://localhost:3000`) under **Authorized JavaScript origins**. No client secret is needed.
 
 ### 3. Run in development
 

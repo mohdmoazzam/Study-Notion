@@ -6,6 +6,7 @@ export const authRoutes = Router();
 
 authRoutes.post("/login", authController.logIn);
 authRoutes.post("/signup", authController.signUp);
+authRoutes.post("/google", authController.googleAuth);
 authRoutes.post("/sendotp", authController.sendOtp);
 authRoutes.post("/changepassword", authenticate, authController.changePassword);
 authRoutes.post("/reset-password-token", authController.requestPasswordReset);

@@ -55,7 +55,11 @@ export const env = Object.freeze({
   razorpay: {
     keyId: required("RAZORPAY_KEY"),
     keySecret: required("RAZORPAY_SECRET"),
+    // Secret set on the webhook in the Razorpay dashboard; the webhook route is disabled while unset.
+    webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET?.trim() ?? "",
   },
+  // OAuth client ID for "Sign in with Google"; Google sign-in is disabled while unset.
+  googleClientId: process.env.GOOGLE_CLIENT_ID?.trim() ?? "",
   // Fixed credentials for the super admin console. Its login is disabled while either is unset.
   superAdmin: {
     email: (process.env.SUPER_ADMIN_EMAIL ?? "").trim().toLowerCase(),

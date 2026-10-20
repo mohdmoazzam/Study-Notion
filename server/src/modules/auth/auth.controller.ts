@@ -53,7 +53,26 @@ export const logIn = asyncHandler(async (req, res) => {
   sendSuccess(res, 200, { token, user, message: "Logged in successfully" });
 });
 
-export const changePassword = asyncHandler(async (req, res) => {
+export const googleAuth = asyncHandler(async (req, res) => {
+  requireFields(req.body, ["credential"], "Google credential is required");
+  const { credential, accountType } = req.body;
+
+  if (accountType !== undefined && !authService.LOGIN_ACCOUNT_TYPES.includes(accountType)) {
+    throw AppError.badRequest("Invalid account type");
+  }
+
+  const { token, user, created } = await authService.googleAuth(String(credential), accountType);
+
+  res.cookie("token", token, authCookieOptions);
+  sendSuccess(res, created ? 201 : 200, {
+    token,
+    user,
+    created,
+    message: created ? "Account created successfully" : "Logged in successfully",
+  });
+});
+
+export const changePassword =asyncHandler(async (req, res) => {
   const { id } = requireUser(req);
   requireFields(req.body, ["oldPassword", "newPassword"]);
 
