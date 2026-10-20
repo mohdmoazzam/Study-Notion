@@ -4,11 +4,11 @@ import type { NotificationChannel } from "./channel";
 
 export const inAppChannel: NotificationChannel<"inApp"> = {
   name: "inApp",
-  async send({ userId }, { title, body, link }, type) {
+  async send({ userId }, { title, body, link, tone }, type) {
     if (!userId) {
       throw new Error(`In-app notification "${type}" needs a userId`);
     }
-    const notification = await Notification.create({ user: userId, type, title, body, link });
+    const notification = await Notification.create({ user: userId, type, title, body, link, tone });
 
     // Saved is delivered: a user who isn't connected sees it next time they open the app.
     // So a failed live push is logged, not thrown, or a retry would store a duplicate.

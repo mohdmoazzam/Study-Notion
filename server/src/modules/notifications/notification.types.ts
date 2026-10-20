@@ -12,6 +12,8 @@ export interface NotificationPayloads {
   "contact.confirmation": ContactDetails;
   "contact.received": ContactDetails;
   "course.enrolled": { name: string; courseName: string };
+  // To the instructor when a student buys one of their courses.
+  "course.newEnrollment": { studentName: string; courseName: string; price: number };
   "payment.succeeded": { name: string; amount: number; orderId: string; paymentId: string };
   "payout.processed": { name: string; payout: PayoutSummary };
 }
@@ -53,7 +55,12 @@ export interface InAppContent {
   body: string;
   // Frontend route to open when the notification is clicked.
   link?: string;
+  // Colours the icon in the notification list; the icon itself comes from the type.
+  tone?: NotificationTone;
 }
+
+export const NOTIFICATION_TONES = ["success", "danger", "info"] as const;
+export type NotificationTone = (typeof NOTIFICATION_TONES)[number];
 
 export interface ChannelContent {
   email: EmailContent;

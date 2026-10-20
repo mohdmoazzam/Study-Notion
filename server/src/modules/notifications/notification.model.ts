@@ -1,4 +1,5 @@
 import { Schema, Types, model } from "mongoose";
+import { NOTIFICATION_TONES, type NotificationTone } from "./notification.types";
 
 const RETENTION_SECONDS = 90 * 24 * 60 * 60;
 
@@ -8,6 +9,7 @@ export interface INotification {
   title: string;
   body: string;
   link?: string;
+  tone?: NotificationTone;
   // Null until the user reads it.
   readAt: Date | null;
   createdAt: Date;
@@ -21,6 +23,7 @@ const notificationSchema = new Schema<INotification>(
     title: { type: String, required: true },
     body: { type: String, required: true },
     link: { type: String },
+    tone: { type: String, enum: NOTIFICATION_TONES },
     readAt: { type: Date, default: null },
   },
   { timestamps: true }

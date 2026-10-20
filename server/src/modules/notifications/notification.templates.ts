@@ -22,7 +22,8 @@ export interface NotificationTemplate<T> {
 }
 
 const formatInr = (amount: number) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(amount);
+  // ₹999, or ₹999.50 when there are paise.
+  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount);
 
 // User input is embedded in the HTML email, so it's escaped.
 const contactHtml = ({ email, firstName, lastName, message, phone }: ContactDetails) =>
@@ -56,6 +57,7 @@ export const templates: { [T in NotificationType]: NotificationTemplate<Notifica
         title: "Password changed",
         body: "Your password was updated. If this wasn't you, reset it right away.",
         link: "/dashboard/settings",
+        tone: "info",
       }),
     },
   },
@@ -82,6 +84,18 @@ export const templates: { [T in NotificationType]: NotificationTemplate<Notifica
         title: "You're enrolled",
         body: `${courseName} is now in your enrolled courses.`,
         link: "/dashboard/enrolled-courses",
+        tone: "success",
+      }),
+    },
+  },
+  "course.newEnrollment": {
+    channels: ["inApp"],
+    render: {
+      inApp: ({ studentName, courseName, price }) => ({
+        title: "New student enrolled",
+        body: `${studentName} bought ${courseName}${price > 0 ? ` (${formatInr(price)})` : ""}.`,
+        link: "/dashboard/instructor",
+        tone: "success",
       }),
     },
   },
@@ -96,6 +110,7 @@ export const templates: { [T in NotificationType]: NotificationTemplate<Notifica
         title: "Payment received",
         body: `We received your payment of ${formatInr(amount)}.`,
         link: "/dashboard/purchase-history",
+        tone: "success",
       }),
     },
   },
@@ -112,11 +127,13 @@ export const templates: { [T in NotificationType]: NotificationTemplate<Notifica
               title: "Withdrawal paid",
               body: `${formatInr(payout.amount)} has been sent to you.`,
               link: "/dashboard/payouts?status=Paid",
+              tone: "success",
             }
           : {
               title: "Withdrawal rejected",
               body: `Your request for ${formatInr(payout.amount)} was not approved; the amount is back in your balance.`,
               link: "/dashboard/payouts?status=Rejected",
+              tone: "danger",
             },
     },
   },

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 import { toast } from "react-hot-toast"
-import { FiBell } from "react-icons/fi"
+import { FiBell, FiBookOpen, FiCreditCard, FiDollarSign, FiShield, FiUserPlus } from "react-icons/fi"
 import { useSelector } from "react-redux"
 import { useLocation, useNavigate } from "react-router-dom"
 
@@ -11,6 +11,33 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "../../services/operations/notificationAPI"
+
+// Icon per notification type (unknown types fall back to the bell). The colour comes from the
+// notification's tone, or the type's default for notifications saved before tones existed.
+const TYPE_ICONS = {
+  "course.enrolled": { Icon: FiBookOpen, tone: "success" },
+  "course.newEnrollment": { Icon: FiUserPlus, tone: "success" },
+  "payment.succeeded": { Icon: FiCreditCard, tone: "success" },
+  "payout.processed": { Icon: FiDollarSign, tone: "success" },
+  "auth.passwordChanged": { Icon: FiShield, tone: "info" },
+}
+const TONE_CLASSES = {
+  success: "bg-selected text-accent",
+  danger: "bg-danger/10 text-danger",
+  info: "bg-page text-content-muted ring-1 ring-line",
+}
+
+function NotificationIcon({ type, tone }) {
+  const { Icon, tone: defaultTone } = TYPE_ICONS[type] ?? { Icon: FiBell, tone: "info" }
+  return (
+    <span
+      aria-hidden="true"
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base ${TONE_CLASSES[tone] ?? TONE_CLASSES[defaultTone]}`}
+    >
+      <Icon />
+    </span>
+  )
+}
 
 const relativeTime = (value) => {
   const seconds = Math.max(0, Math.round((Date.now() - new Date(value).getTime()) / 1000))
@@ -168,13 +195,10 @@ export default function NotificationBell() {
               type="button"
               onClick={() => handleItemClick(notification)}
               className={`flex w-full gap-3 rounded-lg px-3 py-2.5 text-left outline-none transition hover:bg-page focus-visible:bg-page ${
-                notification.readAt ? "" : "bg-selected"
+                notification.readAt ? "" : "bg-page"
               }`}
             >
-              <span
-                aria-hidden="true"
-                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${notification.readAt ? "bg-transparent" : "bg-brand"}`}
-              />
+              <NotificationIcon type={notification.type} tone={notification.tone} />
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold text-content">
                   {notification.title}
@@ -183,6 +207,10 @@ export default function NotificationBell() {
                 <span className="block text-sm text-content-muted">{notification.body}</span>
                 <span className="mt-1 block text-xs text-content-subtle">{relativeTime(notification.createdAt)}</span>
               </span>
+              <span
+                aria-hidden="true"
+                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${notification.readAt ? "bg-transparent" : "bg-brand"}`}
+              />
             </button>
           ))}
           {items && page < totalPages && !error && (

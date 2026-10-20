@@ -7,8 +7,8 @@ import { User } from "../users/user.model";
 // Idempotent: enrolling twice in the same course is a no-op, and the email only goes out once.
 export const enrollStudent = async (userId: string, courseIds: string[]): Promise<void> => {
   const [user, courses] = await Promise.all([
-    User.findById(userId, "firstName email").lean(),
-    Course.find({ _id: { $in: courseIds } }, "courseName").lean(),
+    User.findById(userId, "firstName lastName email").lean(),
+    Course.find({ _id: { $in: courseIds } }, "courseName instructor price").lean(),
   ]);
 
   if (!user) {
@@ -40,6 +40,16 @@ export const enrollStudent = async (userId: string, courseIds: string[]): Promis
         "course.enrolled",
         { userId, email: user.email },
         { name: user.firstName, courseName: course.courseName ?? "" }
+      );
+      // And tell the instructor they have a new student.
+      notifySafe(
+        "course.newEnrollment",
+        { userId: course.instructor.toString() },
+        {
+          studentName: `${user.firstName} ${user.lastName ?? ""}`.trim(),
+          courseName: course.courseName ?? "your course",
+          price: course.price ?? 0,
+        }
       );
     })
   );
