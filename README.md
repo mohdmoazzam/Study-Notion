@@ -110,6 +110,7 @@ Optional backend settings:
 | `NODE_ENV` | Set to `production` for secure, cross-site auth cookies | `development` |
 | `DNS_SERVERS` | DNS servers for the backend to use, e.g. `8.8.8.8,1.1.1.1`, if your network can't resolve `mongodb+srv://` addresses | System DNS |
 | `GOOGLE_CLIENT_ID` | OAuth client ID for "Sign in with Google" (set the same value as `REACT_APP_GOOGLE_CLIENT_ID` in the frontend `.env`) | Google sign-in disabled |
+| `REDIS_URL` | Redis for the notification queue (BullMQ, with retries) and for pushing in-app notifications across server instances, e.g. an Upstash `rediss://` URL | Notifications are delivered in-process |
 | `RAZORPAY_WEBHOOK_SECRET` | Secret of the Razorpay webhook pointed at `<backend>/api/v1/payment/webhook` (events: `order.paid`, `payment.captured`). Enrolls students even if their browser closes before checkout finishes | Webhook disabled (returns 503) |
 
 To enable Google sign-in, create an OAuth client ID of type **Web application** in the [Google Cloud Console](https://console.cloud.google.com/apis/credentials) and add your frontend URLs (e.g. `http://localhost:3000`) under **Authorized JavaScript origins**. No client secret is needed.

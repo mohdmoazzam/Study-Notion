@@ -1,11 +1,10 @@
 import type { UploadedFile } from "express-fileupload";
 import { Types, type FilterQuery } from "mongoose";
-import { payoutStatusEmail } from "../../emails/payoutStatus";
 import { deleteFromCloudinary, getPrivateDownloadUrl, uploadToCloudinary } from "../../lib/cloudinary";
-import { sendMailSafe } from "../../lib/mailer";
 import { AppError } from "../../shared/errors";
 import { escapeRegex } from "../../shared/utils/regex";
 import { Course } from "../courses/course.model";
+import { notifySafe } from "../notifications/notification.service";
 import { User } from "../users/user.model";
 import { PAYOUT_STATUSES, Payout, type IBankAccount, type IPayout, type IReceipt, type PayoutStatus } from "./payout.model";
 
@@ -229,10 +228,25 @@ export const processPayout = async (payoutId: string, { status, reference, admin
 
   const instructor = await User.findById(payout.instructor, "firstName email").lean();
   if (instructor) {
-    sendMailSafe(
-      instructor.email,
-      status === "Paid" ? "Your withdrawal has been paid" : "Your withdrawal request was rejected",
-      payoutStatusEmail(instructor.firstName, payout)
+    notifySafe(
+      "payout.processed",
+      { userId: payout.instructor.toString(), email: instructor.email },
+      {
+        name: instructor.firstName,
+        payout: {
+          status: payout.status,
+          amount: payout.amount,
+          method: payout.method,
+          upiId: payout.upiId,
+          bankAccount: payout.bankAccount && {
+            bankName: payout.bankAccount.bankName,
+            accountNumber: payout.bankAccount.accountNumber,
+          },
+          reference: payout.reference,
+          adminNote: payout.adminNote,
+          hasReceipt: Boolean(payout.receipt),
+        },
+      }
     );
   }
   return withReceiptSummary(payout);

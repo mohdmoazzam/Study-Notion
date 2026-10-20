@@ -1,3 +1,5 @@
+import { env } from "../config/env";
+
 export const contactUsEmail = (
     email: string,
     firstname: string,
@@ -73,7 +75,7 @@ export const contactUsEmail = (
     
     <body>
         <div class="container">
-            <a href="https://studynotion-edtech-project.vercel.app"><img class="logo"
+            <a href="${env.clientUrl}"><img class="logo"
                     src="https://i.ibb.co/7Xyj3PC/logo.png" alt="StudyNotion Logo"></a>
             <div class="message">Contact Form Confirmation</div>
             <div class="body">

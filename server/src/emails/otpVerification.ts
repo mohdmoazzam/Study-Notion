@@ -1,3 +1,5 @@
+import { env } from "../config/env";
+
 export const otpTemplate = (otp: string): string => {
 	return `<!DOCTYPE html>
 	<html>
@@ -66,7 +68,7 @@ export const otpTemplate = (otp: string): string => {
 	
 	<body>
 		<div class="container">
-			<a href="https://studynotion-edtech-project.vercel.app"><img class="logo"
+			<a href="${env.clientUrl}"><img class="logo"
 					src="https://i.ibb.co/7Xyj3PC/logo.png" alt="StudyNotion Logo"></a>
 			<div class="message">OTP Verification Email</div>
 			<div class="body">

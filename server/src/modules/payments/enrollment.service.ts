@@ -1,7 +1,6 @@
-import { courseEnrollmentEmail } from "../../emails/courseEnrollment";
-import { sendMailSafe } from "../../lib/mailer";
 import { AppError } from "../../shared/errors";
 import { Course } from "../courses/course.model";
+import { notifySafe } from "../notifications/notification.service";
 import { CourseProgress } from "../progress/courseProgress.model";
 import { User } from "../users/user.model";
 
@@ -37,10 +36,10 @@ export const enrollStudent = async (userId: string, courseIds: string[]): Promis
 
       // Unmodified means the student was already enrolled (e.g. the webhook got here first).
       if (enrollment.modifiedCount === 0) return;
-      sendMailSafe(
-        user.email,
-        `Successfully Enrolled into ${course.courseName}`,
-        courseEnrollmentEmail(course.courseName ?? "", user.firstName)
+      notifySafe(
+        "course.enrolled",
+        { userId, email: user.email },
+        { name: user.firstName, courseName: course.courseName ?? "" }
       );
     })
   );

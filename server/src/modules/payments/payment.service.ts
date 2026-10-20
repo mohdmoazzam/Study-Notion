@@ -1,12 +1,11 @@
 import crypto from "crypto";
 import { Types } from "mongoose";
 import { env } from "../../config/env";
-import { paymentSuccessEmail } from "../../emails/paymentSuccess";
-import { sendMailSafe } from "../../lib/mailer";
 import { razorpay } from "../../lib/razorpay";
 import { AppError } from "../../shared/errors";
 import { escapeRegex } from "../../shared/utils/regex";
 import { Course } from "../courses/course.model";
+import { notifySafe } from "../notifications/notification.service";
 import { User } from "../users/user.model";
 import { enrollStudent } from "./enrollment.service";
 import { Payment } from "./payment.model";
@@ -225,5 +224,9 @@ export const sendPaymentSuccessEmail = async (
     throw AppError.notFound("User not found");
   }
 
-  sendMailSafe(user.email, "Payment Received", paymentSuccessEmail(user.firstName, amountInPaise / 100, orderId, paymentId));
+  notifySafe(
+    "payment.succeeded",
+    { userId, email: user.email },
+    { name: user.firstName, amount: amountInPaise / 100, orderId, paymentId }
+  );
 };

@@ -4,12 +4,10 @@ import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
 import type { HydratedDocument } from "mongoose";
 import { env } from "../../config/env";
-import { otpTemplate } from "../../emails/otpVerification";
-import { passwordUpdated } from "../../emails/passwordUpdated";
-import { sendMail, sendMailSafe } from "../../lib/mailer";
 import { AppError } from "../../shared/errors";
 import type { AccountType } from "../../shared/types/auth";
 import { Profile } from "../users/profile.model";
+import { notify, notifySafe } from "../notifications/notification.service";
 import { type IUser, User } from "../users/user.model";
 import { OTP } from "./otp.model";
 
@@ -42,11 +40,7 @@ export const sendOtp = async (email: string): Promise<void> => {
   const otpDoc = await OTP.create({ email, otp });
 
   try {
-    await sendMail(
-      email,
-      "Verification E-mail From StudyNotion",
-      otpTemplate(otp),
-    );
+    await notify("auth.otp", { email }, { otp }, { immediate: true });
   } catch (error) {
     await otpDoc.deleteOne();
     throw error;
@@ -262,13 +256,10 @@ export const changePassword = async (
   user.password = await bcrypt.hash(newPassword, SALT_ROUNDS);
   await user.save();
 
-  sendMailSafe(
-    user.email,
-    "Password for your account has been updated",
-    passwordUpdated(
-      user.email,
-      `Password updated successfully for ${user.firstName} ${user.lastName}`,
-    ),
+  notifySafe(
+    "auth.passwordChanged",
+    { userId, email: user.email },
+    { name: `${user.firstName} ${user.lastName}`.trim(), email: user.email },
   );
 };
 
@@ -287,11 +278,7 @@ export const requestPasswordReset = async (email: string): Promise<void> => {
   }
 
   const url = `${env.clientUrl}/update-password/${token}`;
-  await sendMail(
-    email,
-    "Password Reset Link",
-    `Password Reset Link: <a href="${url}">${url}</a>`,
-  );
+  await notify("auth.passwordReset", { email }, { url }, { immediate: true });
 };
 
 export const resetPassword = async (

@@ -1,28 +1,13 @@
 import { env } from "../../config/env";
-import { contactUsEmail } from "../../emails/contactForm";
-import { sendMail } from "../../lib/mailer";
-import { escapeHtml } from "../../shared/utils/html";
+import { notify } from "../notifications/notification.service";
+import type { ContactDetails } from "../notifications/notification.types";
 
-export interface ContactMessage {
-  email: string;
-  firstName: string;
-  lastName: string;
-  message: string;
-  phone: string;
-}
+export type ContactMessage = ContactDetails;
 
-export const sendContactMessage = async ({ email, firstName, lastName, message, phone }: ContactMessage) => {
-  // User input is embedded in HTML emails, so escape it.
-  const html = contactUsEmail(
-    escapeHtml(email),
-    escapeHtml(firstName),
-    escapeHtml(lastName),
-    escapeHtml(message),
-    escapeHtml(phone)
-  );
-
+// Sent immediately so the visitor sees an error if either email can't go out.
+export const sendContactMessage = async (details: ContactMessage) => {
   await Promise.all([
-    sendMail(email, "Your Data send successfully", html),
-    sendMail(env.contactInbox, "Someone Send this data to you", html),
+    notify("contact.confirmation", { email: details.email }, details, { immediate: true }),
+    notify("contact.received", { email: env.contactInbox }, details, { immediate: true }),
   ]);
 };

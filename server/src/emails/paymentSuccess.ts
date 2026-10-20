@@ -1,3 +1,5 @@
+import { env } from "../config/env";
+
 export const paymentSuccessEmail = (
     name: string,
     amount: number,
@@ -72,7 +74,7 @@ export const paymentSuccessEmail = (
       
       <body>
           <div class="container">
-              <a href="https://studynotion-edtech-project.vercel.app"><img class="logo" src="https://i.ibb.co/7Xyj3PC/logo.png"
+              <a href="${env.clientUrl}"><img class="logo" src="https://i.ibb.co/7Xyj3PC/logo.png"
                       alt="StudyNotion Logo"></a>
               <div class="message">Course Payment Confirmation</div>
               <div class="body">

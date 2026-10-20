@@ -20,9 +20,17 @@ const allowAnyOrigin = clientUrls.length === 0 || clientUrls.includes("*");
 const brevoApiKey = process.env.BREVO_API_KEY?.trim() ?? "";
 const appUrls = clientUrls.filter((url) => url !== "*");
 
+const isProduction = process.env.NODE_ENV === "production";
+const isLocalUrl = (url: string) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(url);
+
+// Where links in emails (password reset, dashboard, ...) point: the first CLIENT_URL entry,
+// skipping localhost ones in production so a dev origin listed first can't leak into real emails.
+const frontendUrl =
+  (isProduction ? appUrls.find((url) => !isLocalUrl(url)) : undefined) || appUrls[0] || "http://localhost:3000";
+
 export const env = Object.freeze({
   port: Number(process.env.PORT) || 4000,
-  isProduction: process.env.NODE_ENV === "production",
+  isProduction,
   mongoUrl: required("MONGODB_URL"),
   // Optional override for networks whose DNS can't resolve the SRV records mongodb+srv:// needs.
   dnsServers: (process.env.DNS_SERVERS ?? "")
@@ -34,7 +42,9 @@ export const env = Object.freeze({
   // `true` makes cors reflect the request origin, which (unlike "*") also works with credentials.
   corsOrigin: allowAnyOrigin ? true : appUrls,
   // Base URL for links in emails (e.g. password reset).
-  clientUrl: appUrls[0] ?? "http://localhost:3000",
+  clientUrl: frontendUrl,
+  // True when a production server would put localhost links in emails (no deployed URL in CLIENT_URL).
+  clientUrlIsLocal: isLocalUrl(frontendUrl),
   contactInbox: process.env.CONTACT_INBOX ?? "mohdmozzam27@gmail.com",
   // With BREVO_API_KEY set, mail goes through Brevo's HTTPS API (needed on hosts that block SMTP,
   // like Render's free tier) and the SMTP settings are optional. Otherwise SMTP is used.
@@ -58,6 +68,9 @@ export const env = Object.freeze({
     // Secret set on the webhook in the Razorpay dashboard; the webhook route is disabled while unset.
     webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET?.trim() ?? "",
   },
+  // Redis for the notification queue (BullMQ) and cross-instance realtime fan-out.
+  // While unset, notifications are delivered in-process and realtime events stay on this instance.
+  redisUrl: process.env.REDIS_URL?.trim() ?? "",
   // OAuth client ID for "Sign in with Google"; Google sign-in is disabled while unset.
   googleClientId: process.env.GOOGLE_CLIENT_ID?.trim() ?? "",
   // Fixed credentials for the super admin console. Its login is disabled while either is unset.

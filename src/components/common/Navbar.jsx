@@ -6,6 +6,7 @@ import { Link, matchPath, useLocation } from "react-router-dom";
 import Logo from "./Logo";
 import { toCatalogSlug } from "../../utils/catalog";
 import CategoryIcon from "./CategoryIcon";
+import NotificationBell from "./NotificationBell";
 import { NavbarLinks } from "../../data/navbar-links";
 import { ProfileDropDown } from "../core/Auth/ProfileDropDown";
 import { categories } from "../../services/apis";
@@ -144,6 +145,7 @@ export const Navbar = () => {
               </button>
             </Link>
           )}
+          {token !== null && <NotificationBell />}
           {token !== null && <ProfileDropDown />}
         </div>
       </div>

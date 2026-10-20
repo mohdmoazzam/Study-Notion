@@ -1,3 +1,5 @@
+import { env } from "../config/env";
+
 export const passwordUpdated = (email: string, name: string): string => {
 	return `<!DOCTYPE html>
     <html>
@@ -55,7 +57,7 @@ export const passwordUpdated = (email: string, name: string): string => {
     
     <body>
         <div class="container">
-            <a href="https://studynotion-edtech-project.vercel.app"><img class="logo"
+            <a href="${env.clientUrl}"><img class="logo"
                     src="https://i.ibb.co/7Xyj3PC/logo.png" alt="StudyNotion Logo"></a>
             <div class="message">Password Update Confirmation</div>
             <div class="body">

@@ -1,16 +1,16 @@
 import { env } from "../config/env";
-import type { IPayout } from "../modules/payouts/payout.model";
+import type { PayoutSummary } from "../modules/notifications/notification.types";
 import { escapeHtml } from "../shared/utils/html";
 
 const formatInr = (amount: number) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(amount);
 
-const describeDestination = ({ method, upiId, bankAccount }: IPayout): string =>
+const describeDestination = ({ method, upiId, bankAccount }: PayoutSummary): string =>
   method === "UPI"
     ? `UPI (${upiId})`
     : `${bankAccount?.bankName} account ending ${bankAccount?.accountNumber.slice(-4)}`;
 
-export const payoutStatusEmail = (name: string, payout: IPayout): string => {
+export const payoutStatusEmail = (name: string, payout: PayoutSummary): string => {
   const paid = payout.status === "Paid";
   const amount = escapeHtml(formatInr(payout.amount));
 
@@ -31,7 +31,7 @@ export const payoutStatusEmail = (name: string, payout: IPayout): string => {
       </head>
       <body>
           <div class="container">
-              <a href="https://studynotion-edtech-project.vercel.app"><img class="logo" src="https://i.ibb.co/7Xyj3PC/logo.png"
+              <a href="${env.clientUrl}"><img class="logo" src="https://i.ibb.co/7Xyj3PC/logo.png"
                       alt="StudyNotion Logo"></a>
               <div class="message">${paid ? "Withdrawal Paid" : "Withdrawal Request Rejected"}</div>
               <div class="body">
@@ -43,7 +43,7 @@ export const payoutStatusEmail = (name: string, payout: IPayout): string => {
                         )}.</p>
                   ${payout.reference ? `<p>Transaction reference: <b>${escapeHtml(payout.reference)}</b></p>` : ""}
                   ${
-                    payout.receipt
+                    payout.hasReceipt
                       ? `<p>The payment receipt is available on your <a href="${escapeHtml(
                           `${env.clientUrl}/dashboard/payouts?status=Paid`
                         )}">Payouts page</a>.</p>`

@@ -79,6 +79,14 @@ export const payoutEndpoints = {
   IFSC_LOOKUP_API: BASE_URL + "/payout/ifsc",
 }
 
+// NOTIFICATION ENDPOINTS
+export const notificationEndpoints = {
+  NOTIFICATIONS_API: BASE_URL + "/notifications",
+  NOTIFICATION_STREAM_API: BASE_URL + "/notifications/stream",
+  MARK_ALL_READ_API: BASE_URL + "/notifications/read-all",
+  markReadApi: (id) => `${BASE_URL}/notifications/${id}/read`,
+}
+
 // SUPER ADMIN CONSOLE ENDPOINTS
 export const superAdminEndpoints = {
   SUPER_ADMIN_LOGIN_API: BASE_URL + "/super-admin/login",
